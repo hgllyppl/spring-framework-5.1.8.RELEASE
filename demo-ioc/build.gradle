@@ -1,0 +1,6 @@
+
+dependencies {
+    compile(project(":spring-context"))
+    compile("org.yaml:snakeyaml:1.23")
+    compile("com.alibaba:fastjson:1.2.47")
+}
