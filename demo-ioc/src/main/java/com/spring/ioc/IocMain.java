@@ -12,6 +12,7 @@ import org.springframework.context.annotation.ComponentScan;
 @ComponentScan
 public class IocMain {
 
+    // 注释
     public static void main(String[] args) {
         ConfigurableApplicationContext ctx = new AnnotationConfigApplicationContext(IocMain.class);
         System.out.println(ctx.getBean(ViewProperty.class));
