@@ -97,9 +97,9 @@ public class GenericApplicationContext extends AbstractApplicationContext implem
 
 	@Nullable
 	private ResourceLoader resourceLoader;
-
+	// 自定义 ClassLoader flag
 	private boolean customClassLoader = false;
-
+	/** {@link #refreshBeanFactory()} flag */
 	private final AtomicBoolean refreshed = new AtomicBoolean();
 
 
