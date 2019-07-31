@@ -327,43 +327,22 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		return this.startupDate;
 	}
 
-	/**
-	 * Publish the given event to all listeners.
-	 * <p>Note: Listeners get initialized after the MessageSource, to be able
-	 * to access it within listener implementations. Thus, MessageSource
-	 * implementations cannot publish events.
-	 * @param event the event to publish (may be application-specific or a
-	 * standard framework event)
-	 */
+	// 发布 ApplicationEvent
 	@Override
 	public void publishEvent(ApplicationEvent event) {
 		publishEvent(event, null);
 	}
 
-	/**
-	 * Publish the given event to all listeners.
-	 * <p>Note: Listeners get initialized after the MessageSource, to be able
-	 * to access it within listener implementations. Thus, MessageSource
-	 * implementations cannot publish events.
-	 * @param event the event to publish (may be an {@link ApplicationEvent}
-	 * or a payload object to be turned into a {@link PayloadApplicationEvent})
-	 */
+	// 发布 PayloadApplicationEvent
 	@Override
 	public void publishEvent(Object event) {
 		publishEvent(event, null);
 	}
 
-	/**
-	 * Publish the given event to all listeners.
-	 * @param event the event to publish (may be an {@link ApplicationEvent}
-	 * or a payload object to be turned into a {@link PayloadApplicationEvent})
-	 * @param eventType the resolved event type, if known
-	 * @since 4.2
-	 */
+	// 发布事件
 	protected void publishEvent(Object event, @Nullable ResolvableType eventType) {
 		Assert.notNull(event, "Event must not be null");
-
-		// Decorate event as an ApplicationEvent if necessary
+		// 将事件转成 ApplicationEvent or PayloadApplicationEvent
 		ApplicationEvent applicationEvent;
 		if (event instanceof ApplicationEvent) {
 			applicationEvent = (ApplicationEvent) event;
@@ -374,16 +353,14 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				eventType = ((PayloadApplicationEvent<?>) applicationEvent).getResolvableType();
 			}
 		}
-
-		// Multicast right now if possible - or lazily once the multicaster is initialized
+		// 立即发布事件或者在 applicationEventMulticaster 初始化之后发布
 		if (this.earlyApplicationEvents != null) {
 			this.earlyApplicationEvents.add(applicationEvent);
 		}
 		else {
 			getApplicationEventMulticaster().multicastEvent(applicationEvent, eventType);
 		}
-
-		// Publish event via parent context as well...
+		// 如果可能用 parent context 发布事件
 		if (this.parent != null) {
 			if (this.parent instanceof AbstractApplicationContext) {
 				((AbstractApplicationContext) this.parent).publishEvent(event, eventType);
@@ -729,7 +706,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		for (ApplicationListener<?> listener : getApplicationListeners()) {
 			getApplicationEventMulticaster().addApplicationListener(listener);
 		}
-		// 查找并注册 ApplicationListener
+		// 查找并注册 ApplicationListener beanName
 		String[] listenerBeanNames = getBeanNamesForType(ApplicationListener.class, true, false);
 		for (String listenerBeanName : listenerBeanNames) {
 			getApplicationEventMulticaster().addApplicationListenerBean(listenerBeanName);

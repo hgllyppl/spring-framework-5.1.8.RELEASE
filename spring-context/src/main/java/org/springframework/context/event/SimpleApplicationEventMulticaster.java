@@ -16,17 +16,16 @@
 
 package org.springframework.context.event;
 
-import java.util.concurrent.Executor;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ErrorHandler;
+
+import java.util.concurrent.Executor;
 
 /**
  * Simple implementation of the {@link ApplicationEventMulticaster} interface.
@@ -127,11 +126,14 @@ public class SimpleApplicationEventMulticaster extends AbstractApplicationEventM
 		multicastEvent(event, resolveDefaultEventType(event));
 	}
 
+	// 动态地获取 ApplicationListener 并发布事件
 	@Override
 	public void multicastEvent(final ApplicationEvent event, @Nullable ResolvableType eventType) {
 		ResolvableType type = (eventType != null ? eventType : resolveDefaultEventType(event));
 		Executor executor = getTaskExecutor();
+		// 获取监听事件的 ApplicationListener
 		for (ApplicationListener<?> listener : getApplicationListeners(event, type)) {
+			// 如果可能, 并发地发布事件
 			if (executor != null) {
 				executor.execute(() -> invokeListener(listener, event));
 			}
@@ -145,12 +147,8 @@ public class SimpleApplicationEventMulticaster extends AbstractApplicationEventM
 		return ResolvableType.forInstance(event);
 	}
 
-	/**
-	 * Invoke the given listener with the given event.
-	 * @param listener the ApplicationListener to invoke
-	 * @param event the current event to propagate
-	 * @since 4.1
-	 */
+	// 调用 ApplicationListener
+	// 如果可能, 使用 errorHandler 处理异常
 	protected void invokeListener(ApplicationListener<?> listener, ApplicationEvent event) {
 		ErrorHandler errorHandler = getErrorHandler();
 		if (errorHandler != null) {
@@ -166,6 +164,7 @@ public class SimpleApplicationEventMulticaster extends AbstractApplicationEventM
 		}
 	}
 
+	// 真∙发布事件
 	@SuppressWarnings({"rawtypes", "unchecked"})
 	private void doInvokeListener(ApplicationListener listener, ApplicationEvent event) {
 		try {

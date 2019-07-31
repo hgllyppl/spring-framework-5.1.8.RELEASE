@@ -137,10 +137,11 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 	// Internal helpers
 
 	private void startBeans(boolean autoStartupOnly) {
-		//
+		// 获取 Lifecycle beans
 		Map<String, Lifecycle> lifecycleBeans = getLifecycleBeans();
 		Map<Integer, LifecycleGroup> phases = new HashMap<>();
 		lifecycleBeans.forEach((beanName, bean) -> {
+			// 将 Lifecycle bean 按 phase 分组
 			if (!autoStartupOnly || (bean instanceof SmartLifecycle && ((SmartLifecycle) bean).isAutoStartup())) {
 				int phase = getPhase(bean);
 				LifecycleGroup group = phases.get(phase);
@@ -151,6 +152,7 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 				group.add(beanName, bean);
 			}
 		});
+		// 排序分组并 start
 		if (!phases.isEmpty()) {
 			List<Integer> keys = new ArrayList<>(phases.keySet());
 			Collections.sort(keys);
@@ -160,12 +162,7 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 		}
 	}
 
-	/**
-	 * Start the specified bean as part of the given set of Lifecycle beans,
-	 * making sure that any beans that it depends on are started first.
-	 * @param lifecycleBeans a Map with bean name as key and Lifecycle instance as value
-	 * @param beanName the name of the bean to start
-	 */
+	// 启动 lifecycle bean 和它依赖的 bean
 	private void doStart(Map<String, ? extends Lifecycle> lifecycleBeans, String beanName, boolean autoStartupOnly) {
 		Lifecycle bean = lifecycleBeans.remove(beanName);
 		if (bean != null && bean != this) {
@@ -173,6 +170,7 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 			for (String dependency : dependenciesForBean) {
 				doStart(lifecycleBeans, dependency, autoStartupOnly);
 			}
+			// 如果 lifecycle bean 没有启动且允许启动, 则启动它
 			boolean canAutoStart = !autoStartupOnly || !(bean instanceof SmartLifecycle) || ((SmartLifecycle) bean).isAutoStartup();
 			if (!bean.isRunning() && canAutoStart) {
 				if (logger.isTraceEnabled()) {
@@ -192,9 +190,11 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 	}
 
 	private void stopBeans() {
+		// 获取 Lifecycle beans
 		Map<String, Lifecycle> lifecycleBeans = getLifecycleBeans();
 		Map<Integer, LifecycleGroup> phases = new HashMap<>();
 		lifecycleBeans.forEach((beanName, bean) -> {
+			// 将 Lifecycle bean 按 phase 分组
 			int shutdownPhase = getPhase(bean);
 			LifecycleGroup group = phases.get(shutdownPhase);
 			if (group == null) {
@@ -203,6 +203,7 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 			}
 			group.add(beanName, bean);
 		});
+		// 排序分组并 stop
 		if (!phases.isEmpty()) {
 			List<Integer> keys = new ArrayList<>(phases.keySet());
 			keys.sort(Collections.reverseOrder());
@@ -212,12 +213,7 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 		}
 	}
 
-	/**
-	 * Stop the specified bean as part of the given set of Lifecycle beans,
-	 * making sure that any beans that depends on it are stopped first.
-	 * @param lifecycleBeans a Map with bean name as key and Lifecycle instance as value
-	 * @param beanName the name of the bean to stop
-	 */
+	// 停止所有的 Lifecycle beans 和它依赖的 bean
 	private void doStop(Map<String, ? extends Lifecycle> lifecycleBeans, final String beanName,
 			final CountDownLatch latch, final Set<String> countDownBeanNames) {
 
@@ -228,7 +224,9 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 				doStop(lifecycleBeans, dependentBean, latch, countDownBeanNames);
 			}
 			try {
+				// 如果 bean 正在运行
 				if (bean.isRunning()) {
+					// 如果是 SmartLifecycle, 则可以并发的停止它
 					if (bean instanceof SmartLifecycle) {
 						if (logger.isTraceEnabled()) {
 							logger.trace("Asking bean '" + beanName + "' of type [" +
@@ -243,6 +241,7 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 							}
 						});
 					}
+					// 反之, 则直接停止
 					else {
 						if (logger.isTraceEnabled()) {
 							logger.trace("Stopping bean '" + beanName + "' of type [" +
@@ -254,6 +253,7 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 						}
 					}
 				}
+				// 反之, 如果是 SmartLifecycle, 则将计数减1
 				else if (bean instanceof SmartLifecycle) {
 					// Don't wait for beans that aren't running...
 					latch.countDown();
@@ -318,17 +318,17 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 	 * and stopped together based on their 'phase' value (or the default value of 0).
 	 */
 	private class LifecycleGroup {
-
+		//
 		private final int phase;
-
+		// 等待 smartLifecycle 停止的超时时间, 默认 30s
 		private final long timeout;
-
+		// all lifecycle bean
 		private final Map<String, ? extends Lifecycle> lifecycleBeans;
-
+		// 是否自启
 		private final boolean autoStartupOnly;
-
+		// lifecycle bean
 		private final List<LifecycleGroupMember> members = new ArrayList<>();
-
+		// smartLifecycle count
 		private int smartMemberCount;
 
 		public LifecycleGroup(
@@ -347,6 +347,7 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 			}
 		}
 
+		// 启动所有 member
 		public void start() {
 			if (this.members.isEmpty()) {
 				return;
@@ -360,6 +361,7 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 			}
 		}
 
+		// 停止所有 member
 		public void stop() {
 			if (this.members.isEmpty()) {
 				return;
@@ -368,18 +370,22 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 				logger.debug("Stopping beans in phase " + this.phase);
 			}
 			this.members.sort(Collections.reverseOrder());
+			// latch、countDownBeanNames 用于停止 SmartLifecycle
 			CountDownLatch latch = new CountDownLatch(this.smartMemberCount);
 			Set<String> countDownBeanNames = Collections.synchronizedSet(new LinkedHashSet<>());
 			Set<String> lifecycleBeanNames = new HashSet<>(this.lifecycleBeans.keySet());
+			// 迭代并停止 members
 			for (LifecycleGroupMember member : this.members) {
 				if (lifecycleBeanNames.contains(member.name)) {
 					doStop(this.lifecycleBeans, member.name, latch, countDownBeanNames);
 				}
+				// what the fuck for this condition?
 				else if (member.bean instanceof SmartLifecycle) {
 					// Already removed: must have been a dependent bean from another phase
 					latch.countDown();
 				}
 			}
+			// 等待所有 SmartLifecycle 停止完成
 			try {
 				latch.await(this.timeout, TimeUnit.MILLISECONDS);
 				if (latch.getCount() > 0 && !countDownBeanNames.isEmpty() && logger.isInfoEnabled()) {

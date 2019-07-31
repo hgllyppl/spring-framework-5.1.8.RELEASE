@@ -141,9 +141,11 @@ public class ApplicationListenerMethodAdapter implements GenericApplicationListe
 	@Override
 	public boolean supportsEventType(ResolvableType eventType) {
 		for (ResolvableType declaredEventType : this.declaredEventTypes) {
+			// 判断给定的 eventType 是否符合当前 listener 的 declaredEventType
 			if (declaredEventType.isAssignableFrom(eventType)) {
 				return true;
 			}
+			// 如果 eventType.clazz = PayloadApplicationEvent, 则判断 eventType.payloadType 是否符合 declaredEventType
 			if (PayloadApplicationEvent.class.isAssignableFrom(eventType.toClass())) {
 				ResolvableType payloadType = eventType.as(PayloadApplicationEvent.class).getGeneric();
 				if (declaredEventType.isAssignableFrom(payloadType)) {
@@ -164,13 +166,11 @@ public class ApplicationListenerMethodAdapter implements GenericApplicationListe
 		return this.order;
 	}
 
-
-	/**
-	 * Process the specified {@link ApplicationEvent}, checking if the condition
-	 * match and handling non-null result, if any.
-	 */
+	// 解析参数并判断是否符合执行条件, 如果符合则调用目标方法
+	// 如果目标方法有返回值, 则将其返回值作为事件发布出去
 	public void processEvent(ApplicationEvent event) {
 		Object[] args = resolveArguments(event);
+		// 判断执行条件
 		if (shouldHandle(event, args)) {
 			Object result = doInvoke(args);
 			if (result != null) {
@@ -182,14 +182,10 @@ public class ApplicationListenerMethodAdapter implements GenericApplicationListe
 		}
 	}
 
-	/**
-	 * Resolve the method arguments to use for the specified {@link ApplicationEvent}.
-	 * <p>These arguments will be used to invoke the method handled by this instance.
-	 * Can return {@code null} to indicate that no suitable arguments could be resolved
-	 * and therefore the method should not be invoked at all for the specified event.
-	 */
+	// 将 event 包装成目标方法的参数
 	@Nullable
 	protected Object[] resolveArguments(ApplicationEvent event) {
+		// 取 declaredEventType
 		ResolvableType declaredEventType = getResolvableType(event);
 		if (declaredEventType == null) {
 			return null;
@@ -198,16 +194,18 @@ public class ApplicationListenerMethodAdapter implements GenericApplicationListe
 			return new Object[0];
 		}
 		Class<?> declaredEventClass = declaredEventType.toClass();
-		if (!ApplicationEvent.class.isAssignableFrom(declaredEventClass) &&
-				event instanceof PayloadApplicationEvent) {
+		// 如果 event 是 PayloadApplicationEvent, 则包装 event.getPayload()
+		if (!ApplicationEvent.class.isAssignableFrom(declaredEventClass) && event instanceof PayloadApplicationEvent) {
 			Object payload = ((PayloadApplicationEvent) event).getPayload();
 			if (declaredEventClass.isInstance(payload)) {
 				return new Object[] {payload};
 			}
 		}
+		// 如果 !PayloadApplicationEvent, 则包装 event
 		return new Object[] {event};
 	}
 
+	// 将目标方法的结果作为事件并发布
 	protected void handleResult(Object result) {
 		if (result.getClass().isArray()) {
 			Object[] events = ObjectUtils.toObjectArray(result);
@@ -233,6 +231,7 @@ public class ApplicationListenerMethodAdapter implements GenericApplicationListe
 		}
 	}
 
+	// 判断执行条件
 	private boolean shouldHandle(ApplicationEvent event, @Nullable Object[] args) {
 		if (args == null) {
 			return false;
@@ -246,9 +245,7 @@ public class ApplicationListenerMethodAdapter implements GenericApplicationListe
 		return true;
 	}
 
-	/**
-	 * Invoke the event listener method with the given argument values.
-	 */
+	// 反射调用目标方法
 	@Nullable
 	protected Object doInvoke(Object... args) {
 		Object bean = getTargetBean();
@@ -346,6 +343,7 @@ public class ApplicationListenerMethodAdapter implements GenericApplicationListe
 	@Nullable
 	private ResolvableType getResolvableType(ApplicationEvent event) {
 		ResolvableType payloadType = null;
+		// 如果 event 是 PayloadApplicationEvent, 则取 event.payloadType
 		if (event instanceof PayloadApplicationEvent) {
 			PayloadApplicationEvent<?> payloadEvent = (PayloadApplicationEvent<?>) event;
 			ResolvableType eventType = payloadEvent.getResolvableType();
@@ -353,6 +351,7 @@ public class ApplicationListenerMethodAdapter implements GenericApplicationListe
 				payloadType = eventType.as(PayloadApplicationEvent.class).getGeneric();
 			}
 		}
+		// event 或 event.payloadType 符合 declaredEventType, 则返回 declaredEventType
 		for (ResolvableType declaredEventType : this.declaredEventTypes) {
 			Class<?> eventClass = declaredEventType.toClass();
 			if (!ApplicationEvent.class.isAssignableFrom(eventClass) &&

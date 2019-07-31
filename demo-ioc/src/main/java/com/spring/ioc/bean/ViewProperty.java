@@ -1,5 +1,6 @@
 package com.spring.ioc.bean;
 
+import com.alibaba.fastjson.JSON;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -15,4 +16,16 @@ public class ViewProperty {
     @Value("prop.a")
     private String propA;
 
+    public String getPropA() {
+        return propA;
+    }
+
+    public String getYmlA() {
+        return ymlA;
+    }
+
+    @Override
+    public String toString() {
+        return JSON.toJSONString(this);
+    }
 }

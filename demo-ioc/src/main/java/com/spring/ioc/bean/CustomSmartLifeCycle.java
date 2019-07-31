@@ -22,6 +22,14 @@ public class CustomSmartLifeCycle implements SmartLifecycle {
     }
 
     @Override
+    public void stop(Runnable callback) {
+        new Thread(() -> {
+            stop();
+            callback.run();
+        }).start();
+    }
+
+    @Override
     public boolean isRunning() {
         return running;
     }
