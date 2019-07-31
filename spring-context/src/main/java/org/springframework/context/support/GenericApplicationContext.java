@@ -93,8 +93,9 @@ import org.springframework.util.Assert;
  */
 public class GenericApplicationContext extends AbstractApplicationContext implements BeanDefinitionRegistry {
 
+	// beanFactory
 	private final DefaultListableBeanFactory beanFactory;
-
+	//
 	@Nullable
 	private ResourceLoader resourceLoader;
 	// 自定义 ClassLoader flag
@@ -102,22 +103,12 @@ public class GenericApplicationContext extends AbstractApplicationContext implem
 	/** {@link #refreshBeanFactory()} flag */
 	private final AtomicBoolean refreshed = new AtomicBoolean();
 
-
-	/**
-	 * Create a new GenericApplicationContext.
-	 * @see #registerBeanDefinition
-	 * @see #refresh
-	 */
+	// 实例化 GenericApplicationContext
 	public GenericApplicationContext() {
 		this.beanFactory = new DefaultListableBeanFactory();
 	}
 
-	/**
-	 * Create a new GenericApplicationContext with the given DefaultListableBeanFactory.
-	 * @param beanFactory the DefaultListableBeanFactory instance to use for this context
-	 * @see #registerBeanDefinition
-	 * @see #refresh
-	 */
+	// 用给定的 beanFactory 实例化 GenericApplicationContext
 	public GenericApplicationContext(DefaultListableBeanFactory beanFactory) {
 		Assert.notNull(beanFactory, "BeanFactory must not be null");
 		this.beanFactory = beanFactory;

@@ -16,35 +16,6 @@
 
 package org.springframework.beans.factory.support;
 
-import java.io.IOException;
-import java.io.NotSerializableException;
-import java.io.ObjectInputStream;
-import java.io.ObjectStreamException;
-import java.io.Serializable;
-import java.lang.annotation.Annotation;
-import java.lang.ref.Reference;
-import java.lang.ref.WeakReference;
-import java.lang.reflect.Method;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
-import java.util.stream.Stream;
-import javax.inject.Provider;
-
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.TypeConverter;
@@ -81,6 +52,35 @@ import org.springframework.util.ClassUtils;
 import org.springframework.util.CompositeIterator;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
+
+import javax.inject.Provider;
+import java.io.IOException;
+import java.io.NotSerializableException;
+import java.io.ObjectInputStream;
+import java.io.ObjectStreamException;
+import java.io.Serializable;
+import java.lang.annotation.Annotation;
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
+import java.lang.reflect.Method;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 /**
  * Spring's default implementation of the {@link ConfigurableListableBeanFactory}
@@ -477,15 +477,17 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 	@Override
 	public String[] getBeanNamesForType(@Nullable Class<?> type, boolean includeNonSingletons, boolean allowEagerInit) {
+		// 如果 beanFactory 没有冻结 或 type = null 或 不允许提前初始化，则调用 doGetBeanNamesForType
 		if (!isConfigurationFrozen() || type == null || !allowEagerInit) {
 			return doGetBeanNamesForType(ResolvableType.forRawClass(type), includeNonSingletons, allowEagerInit);
 		}
-		Map<Class<?>, String[]> cache =
-				(includeNonSingletons ? this.allBeanNamesByType : this.singletonBeanNamesByType);
+		// 从缓存中获取跟 type 符合的 beanNames
+		Map<Class<?>, String[]> cache = (includeNonSingletons ? this.allBeanNamesByType : this.singletonBeanNamesByType);
 		String[] resolvedBeanNames = cache.get(type);
 		if (resolvedBeanNames != null) {
 			return resolvedBeanNames;
 		}
+		// 如果从缓存获取不到，则直接调用 doGetBeanNamesForType 并缓存之
 		resolvedBeanNames = doGetBeanNamesForType(ResolvableType.forRawClass(type), includeNonSingletons, true);
 		if (ClassUtils.isCacheSafe(type, getBeanClassLoader())) {
 			cache.put(type, resolvedBeanNames);
@@ -495,80 +497,78 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 	private String[] doGetBeanNamesForType(ResolvableType type, boolean includeNonSingletons, boolean allowEagerInit) {
 		List<String> result = new ArrayList<>();
-
-		// Check all bean definitions.
+		// 从 beanDefinitionNames 里查找符合 type 的 beanNames
 		for (String beanName : this.beanDefinitionNames) {
-			// Only consider bean as eligible if the bean name
-			// is not defined as alias for some other bean.
-			if (!isAlias(beanName)) {
-				try {
-					RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
-					// Only check bean definition if it is complete.
-					if (!mbd.isAbstract() && (allowEagerInit ||
-							(mbd.hasBeanClass() || !mbd.isLazyInit() || isAllowEagerClassLoading()) &&
-									!requiresEagerInitForType(mbd.getFactoryBeanName()))) {
-						// In case of FactoryBean, match object created by FactoryBean.
-						boolean isFactoryBean = isFactoryBean(beanName, mbd);
-						BeanDefinitionHolder dbd = mbd.getDecoratedDefinition();
-						boolean matchFound =
-								(allowEagerInit || !isFactoryBean ||
-										(dbd != null && !mbd.isLazyInit()) || containsSingleton(beanName)) &&
-								(includeNonSingletons ||
-										(dbd != null ? mbd.isSingleton() : isSingleton(beanName))) &&
-								isTypeMatch(beanName, type);
-						if (!matchFound && isFactoryBean) {
-							// In case of FactoryBean, try to match FactoryBean instance itself next.
-							beanName = FACTORY_BEAN_PREFIX + beanName;
-							matchFound = (includeNonSingletons || mbd.isSingleton()) && isTypeMatch(beanName, type);
-						}
-						if (matchFound) {
-							result.add(beanName);
-						}
+			if (isAlias(beanName)) {
+				continue;
+			}
+			try {
+				RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
+				// what the fuck for this condition?
+				boolean flag1 = mbd.hasBeanClass() || !mbd.isLazyInit() || isAllowEagerClassLoading();
+				boolean flag2 = !requiresEagerInitForType(mbd.getFactoryBeanName());
+				boolean flag3 = allowEagerInit || flag1 && flag2;
+				// 非抽象bean 且 flag3
+				if (!mbd.isAbstract() && flag3) {
+					boolean isFactoryBean = isFactoryBean(beanName, mbd);
+					BeanDefinitionHolder dbd = mbd.getDecoratedDefinition();
+					// (允许提前初始化 或 非FactoryBean 或 非延迟加载 或 是单例)
+					// 且 (允许非单例 或 beanName是单例)
+					// 且 (beanName 符合 type)
+					boolean matchFound =
+							(allowEagerInit || !isFactoryBean || (dbd != null && !mbd.isLazyInit()) || containsSingleton(beanName))
+									&& (includeNonSingletons || (dbd != null ? mbd.isSingleton() : isSingleton(beanName)))
+									&& isTypeMatch(beanName, type);
+					// 如果 beanName 不符合 type 且是 FactoryBean
+					if (!matchFound && isFactoryBean) {
+						beanName = FACTORY_BEAN_PREFIX + beanName;
+						// (允许非单例 或 FactoryBeanRef是单例) 且 (FactoryBeanRef 符合 type)
+						matchFound = (includeNonSingletons || mbd.isSingleton()) && isTypeMatch(beanName, type);
 					}
-				}
-				catch (CannotLoadBeanClassException ex) {
-					if (allowEagerInit) {
-						throw ex;
+					// 以上条件为 true ，则加入列表
+					if (matchFound) {
+						result.add(beanName);
 					}
-					// Probably a class name with a placeholder: let's ignore it for type matching purposes.
-					if (logger.isTraceEnabled()) {
-						logger.trace("Ignoring bean class loading failure for bean '" + beanName + "'", ex);
-					}
-					onSuppressedException(ex);
-				}
-				catch (BeanDefinitionStoreException ex) {
-					if (allowEagerInit) {
-						throw ex;
-					}
-					// Probably some metadata with a placeholder: let's ignore it for type matching purposes.
-					if (logger.isTraceEnabled()) {
-						logger.trace("Ignoring unresolvable metadata in bean definition '" + beanName + "'", ex);
-					}
-					onSuppressedException(ex);
 				}
 			}
+			catch (CannotLoadBeanClassException ex) {
+				if (allowEagerInit) {
+					throw ex;
+				}
+				if (logger.isTraceEnabled()) {
+					logger.trace("Ignoring bean class loading failure for bean '" + beanName + "'", ex);
+				}
+				onSuppressedException(ex);
+			}
+			catch (BeanDefinitionStoreException ex) {
+				if (allowEagerInit) {
+					throw ex;
+				}
+				if (logger.isTraceEnabled()) {
+					logger.trace("Ignoring unresolvable metadata in bean definition '" + beanName + "'", ex);
+				}
+				onSuppressedException(ex);
+			}
 		}
-
-		// Check manually registered singletons too.
+		// 从 manualSingletonNames 里查找符合 type 的 beanNames
 		for (String beanName : this.manualSingletonNames) {
 			try {
-				// In case of FactoryBean, match object created by FactoryBean.
+				// 如果 beanName 是 FactoryBean
 				if (isFactoryBean(beanName)) {
+					// 如果(允许非单例 或 beanName是单例) 且 (beanName 符合 type)，则加入列表
 					if ((includeNonSingletons || isSingleton(beanName)) && isTypeMatch(beanName, type)) {
 						result.add(beanName);
-						// Match found for this bean: do not match FactoryBean itself anymore.
 						continue;
 					}
-					// In case of FactoryBean, try to match FactoryBean itself next.
+					// 如果匹配失败, 取 FactoryBeanRef 再匹配一次
 					beanName = FACTORY_BEAN_PREFIX + beanName;
 				}
-				// Match raw bean instance (might be raw FactoryBean).
+				// 如果 beanName 符合 type，则加入列表
 				if (isTypeMatch(beanName, type)) {
 					result.add(beanName);
 				}
 			}
 			catch (NoSuchBeanDefinitionException ex) {
-				// Shouldn't happen - probably a result of circular reference resolution...
 				if (logger.isTraceEnabled()) {
 					logger.trace("Failed to check manually registered singleton with name '" + beanName + "'", ex);
 				}
@@ -813,15 +813,15 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		if (logger.isTraceEnabled()) {
 			logger.trace("Pre-instantiating singletons in " + this);
 		}
-
 		// Iterate over a copy to allow for init methods which in turn register new bean definitions.
 		// While this may not be part of the regular factory bootstrap, it does otherwise work fine.
 		List<String> beanNames = new ArrayList<>(this.beanDefinitionNames);
 
-		// Trigger initialization of all non-lazy singleton beans...
+		// 初始化所有 非抽象非延迟加载的单例 bean
 		for (String beanName : beanNames) {
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
+				// 如果是 FactoryBean, 则初始化 FactoryBean
 				if (isFactoryBean(beanName)) {
 					Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
 					if (bean instanceof FactoryBean) {
@@ -836,18 +836,19 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 							isEagerInit = (factory instanceof SmartFactoryBean &&
 									((SmartFactoryBean<?>) factory).isEagerInit());
 						}
+						// 如果 SmartFactoryBean.isEagerInit(), 则初始化 bean
 						if (isEagerInit) {
 							getBean(beanName);
 						}
 					}
 				}
+				// 反之，则初始化 bean
 				else {
 					getBean(beanName);
 				}
 			}
 		}
-
-		// Trigger post-initialization callback for all applicable beans...
+		// 查找 SmartInitializingSingleton 并调用其 afterSingletonsInstantiated 方法
 		for (String beanName : beanNames) {
 			Object singletonInstance = getSingleton(beanName);
 			if (singletonInstance instanceof SmartInitializingSingleton) {
@@ -1017,6 +1018,8 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		return isAllowBeanDefinitionOverriding();
 	}
 
+
+	// 注册单例, 如果已存在同名单例则抛出 IllegalStateException
 	@Override
 	public void registerSingleton(String beanName, Object singletonObject) throws IllegalStateException {
 		super.registerSingleton(beanName, singletonObject);
@@ -1042,15 +1045,10 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		updateManualSingletonNames(set -> set.remove(beanName), set -> set.contains(beanName));
 	}
 
-	/**
-	 * Update the factory's internal set of manual singleton names.
-	 * @param action the modification action
-	 * @param condition a precondition for the modification action
-	 * (if this condition does not apply, the action can be skipped)
-	 */
+	// 将 beanName 加入 manualSingletonNames
 	private void updateManualSingletonNames(Consumer<Set<String>> action, Predicate<Set<String>> condition) {
+		// 如果 beanFacotry 已经开始创建 bean, 则需要加锁地修改 manualSingletonNames
 		if (hasBeanCreationStarted()) {
-			// Cannot modify startup-time collection elements anymore (for stable iteration)
 			synchronized (this.beanDefinitionMap) {
 				if (condition.test(this.manualSingletonNames)) {
 					Set<String> updatedSingletons = new LinkedHashSet<>(this.manualSingletonNames);
@@ -1060,16 +1058,14 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			}
 		}
 		else {
-			// Still in startup registration phase
+			// 如果 beanDefinitionMap 不包含 beanName, 则将 beanName 加入 manualSingletonNames
 			if (condition.test(this.manualSingletonNames)) {
 				action.accept(this.manualSingletonNames);
 			}
 		}
 	}
 
-	/**
-	 * Remove any assumptions about by-type mappings.
-	 */
+	// 清除缓存
 	private void clearByTypeCache() {
 		this.allBeanNamesByType.clear();
 		this.singletonBeanNamesByType.clear();

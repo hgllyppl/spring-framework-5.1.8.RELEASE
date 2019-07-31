@@ -112,12 +112,8 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 	private final ConfigurablePropertyResolver propertyResolver =
 			new PropertySourcesPropertyResolver(this.propertySources);
 
-
 	/**
-	 * Create a new {@code Environment} instance, calling back to
-	 * {@link #customizePropertySources(MutablePropertySources)} during construction to
-	 * allow subclasses to contribute or manipulate {@link PropertySource} instances as
-	 * appropriate.
+	 * 实例化 {@code Environment} 并调用 {@link #customizePropertySources}
 	 * @see #customizePropertySources(MutablePropertySources)
 	 */
 	public AbstractEnvironment() {

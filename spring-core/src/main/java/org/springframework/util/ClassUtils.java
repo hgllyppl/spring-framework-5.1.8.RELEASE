@@ -164,9 +164,6 @@ public abstract class ClassUtils {
 	/**
 	 * 获取类加载器, 以如下优先级返回
 	 * Thread.getContextClassLoader -> clazz.getClassLoader -> ClassLoader.getSystemClassLoader
-	 *
-	 * @return the default ClassLoader (only {@code null} if even the system
-	 * ClassLoader isn't accessible)
 	 * @see Thread#getContextClassLoader()
 	 * @see ClassLoader#getSystemClassLoader()
 	 */

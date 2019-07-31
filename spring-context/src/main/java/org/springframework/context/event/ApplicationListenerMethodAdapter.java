@@ -16,18 +16,8 @@
 
 package org.springframework.context.event;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.lang.reflect.UndeclaredThrowableException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.support.AopUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEvent;
@@ -42,6 +32,15 @@ import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.lang.reflect.UndeclaredThrowableException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * {@link GenericApplicationListener} adapter that delegates the processing of
@@ -61,28 +60,27 @@ import org.springframework.util.StringUtils;
 public class ApplicationListenerMethodAdapter implements GenericApplicationListener {
 
 	protected final Log logger = LogFactory.getLog(getClass());
-
+	// 带 EventListener 的 beanName
 	private final String beanName;
-
+	// 带 EventListener 的 method
 	private final Method method;
-
+	// 带 EventListener 的 targetMethod
 	private final Method targetMethod;
 
 	private final AnnotatedElementKey methodKey;
-
+	/** {@link EventListener#value()} */
 	private final List<ResolvableType> declaredEventTypes;
-
+	/** {@link EventListener#condition()} */
 	@Nullable
 	private final String condition;
-
+	/** 如果带 {@link Order} */
 	private final int order;
 
 	@Nullable
 	private ApplicationContext applicationContext;
-
+	/** @see EventListenerMethodProcessor#evaluator */
 	@Nullable
 	private EventExpressionEvaluator evaluator;
-
 
 	public ApplicationListenerMethodAdapter(String beanName, Class<?> targetClass, Method method) {
 		this.beanName = beanName;
@@ -97,13 +95,15 @@ public class ApplicationListenerMethodAdapter implements GenericApplicationListe
 		this.order = resolveOrder(this.targetMethod);
 	}
 
+	// 从注解或参数上获取事件类型
 	private static List<ResolvableType> resolveDeclaredEventTypes(Method method, @Nullable EventListener ann) {
+		// 如果目标方法参数 > 1, 则抛出 IllegalStateException
 		int count = method.getParameterCount();
 		if (count > 1) {
 			throw new IllegalStateException(
 					"Maximum one parameter is allowed for event listener method: " + method);
 		}
-
+		// 从注解上获取事件类型
 		if (ann != null) {
 			Class<?>[] classes = ann.classes();
 			if (classes.length > 0) {
@@ -114,7 +114,7 @@ public class ApplicationListenerMethodAdapter implements GenericApplicationListe
 				return types;
 			}
 		}
-
+		// 注解上没有则从参数上取
 		if (count == 0) {
 			throw new IllegalStateException(
 					"Event parameter is mandatory for event listener method: " + method);
@@ -127,10 +127,6 @@ public class ApplicationListenerMethodAdapter implements GenericApplicationListe
 		return (ann != null ? ann.value() : 0);
 	}
 
-
-	/**
-	 * Initialize this instance.
-	 */
 	void init(ApplicationContext applicationContext, EventExpressionEvaluator evaluator) {
 		this.applicationContext = applicationContext;
 		this.evaluator = evaluator;

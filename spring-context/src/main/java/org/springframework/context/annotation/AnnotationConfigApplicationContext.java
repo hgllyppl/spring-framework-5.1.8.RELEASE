@@ -51,16 +51,11 @@ import java.util.function.Supplier;
  * @see org.springframework.context.support.GenericXmlApplicationContext
  */
 public class AnnotationConfigApplicationContext extends GenericApplicationContext implements AnnotationConfigRegistry {
-	// 名字叫 BeanDefinitionReader, 但干的事确是注册 BeanDefinition
+	// annotated classes 注册器
 	private final AnnotatedBeanDefinitionReader reader;
-	//
+	// classPath classes 注册器
 	private final ClassPathBeanDefinitionScanner scanner;
 
-
-	/**
-	 * Create a new AnnotationConfigApplicationContext that needs to be populated
-	 * through {@link #register} calls and then manually {@linkplain #refresh refreshed}.
-	 */
 	public AnnotationConfigApplicationContext() {
 		this.reader = new AnnotatedBeanDefinitionReader(this);
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
@@ -76,12 +71,6 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
 	}
 
-	/**
-	 * Create a new AnnotationConfigApplicationContext, deriving bean definitions
-	 * from the given annotated classes and automatically refreshing the context.
-	 * @param annotatedClasses one or more annotated classes,
-	 * e.g. {@link Configuration @Configuration} classes
-	 */
 	public AnnotationConfigApplicationContext(Class<?>... annotatedClasses) {
 		this();
 		register(annotatedClasses);
@@ -143,28 +132,13 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	// Implementation of AnnotationConfigRegistry
 	//---------------------------------------------------------------------
 
-	/**
-	 * Register one or more annotated classes to be processed.
-	 * <p>Note that {@link #refresh()} must be called in order for the context
-	 * to fully process the new classes.
-	 * @param annotatedClasses one or more annotated classes,
-	 * e.g. {@link Configuration @Configuration} classes
-	 * @see #scan(String...)
-	 * @see #refresh()
-	 */
+	// 注册 annotatedClasses
 	public void register(Class<?>... annotatedClasses) {
 		Assert.notEmpty(annotatedClasses, "At least one annotated class must be specified");
 		this.reader.register(annotatedClasses);
 	}
 
-	/**
-	 * Perform a scan within the specified base packages.
-	 * <p>Note that {@link #refresh()} must be called in order for the context
-	 * to fully process the new classes.
-	 * @param basePackages the packages to check for annotated classes
-	 * @see #register(Class...)
-	 * @see #refresh()
-	 */
+	// 扫描 basePackages
 	public void scan(String... basePackages) {
 		Assert.notEmpty(basePackages, "At least one base package must be specified");
 		this.scanner.scan(basePackages);

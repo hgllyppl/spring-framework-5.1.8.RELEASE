@@ -9,7 +9,7 @@ import javax.annotation.PreDestroy;
 /**
  * Created by xin on 2019/4/28.
  */
-public class LifeCycle implements InitializingBean, DisposableBean {
+public class BeanLifeCycle implements InitializingBean, DisposableBean {
 
     @PostConstruct
     public void init() {

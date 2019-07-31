@@ -1,8 +1,9 @@
 package com.spring.ioc.config;
 
+import com.spring.ioc.bean.BeanLifeCycle;
 import com.spring.ioc.bean.CircularReferenceA;
 import com.spring.ioc.bean.CircularReferenceB;
-import com.spring.ioc.bean.LifeCycle;
+import com.spring.ioc.bean.CustomSmartLifeCycle;
 import com.spring.ioc.bean.StartListener;
 import com.spring.ioc.bean.Student;
 import com.spring.ioc.bean.StudentFactory;
@@ -53,29 +54,34 @@ public class BeanConfig {
     public CircularReferenceB circularReferenceB() {
         return new CircularReferenceB();
     }
-    //-------------------------生命周期---------------------------------------
+    //-------------------------bean生命周期---------------------------------------
     @Bean
-    public LifeCycle lifeCycle() {
-        return new LifeCycle();
+    public BeanLifeCycle beanLifeCycle() {
+        return new BeanLifeCycle();
+    }
+    //-------------------------SmartLifeCycle---------------------------------------
+    @Bean
+    public CustomSmartLifeCycle customSmartLifeCycle() {
+        return new CustomSmartLifeCycle();
     }
     //-------------------------同名同类bean---------------------------------------
-    @Bean("sameName-sameClass")
+    @Bean("sameBeanName-sameClass")
     public Student student1() {
         return new Student().setName("xiao2");
     }
 
-    @Bean("sameName-sameClass")
+    @Bean("sameBeanName-sameClass")
     public Student student2() {
         return new Student().setName("xiangxiang");
     }
     //-------------------------同名不同类bean---------------------------------------
-    @Bean("sameName-differenceClass")
+    @Bean("sameBeanName-differenceClass")
     public Student student3() {
         return new Student().setName("qiangqiang");
     }
 
-    @Bean("sameName-differenceClass")
-    public LifeCycle student4() {
-        return new LifeCycle();
+    @Bean("sameBeanName-differenceClass")
+    public BeanLifeCycle student4() {
+        return new BeanLifeCycle();
     }
 }
