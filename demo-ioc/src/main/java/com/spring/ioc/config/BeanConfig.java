@@ -55,7 +55,7 @@ public class BeanConfig {
         return new CircularReferenceB();
     }
     //-------------------------bean生命周期---------------------------------------
-    @Bean
+    @Bean(initMethod = "init", destroyMethod = "destroy")
     public BeanLifeCycle beanLifeCycle() {
         return new BeanLifeCycle();
     }

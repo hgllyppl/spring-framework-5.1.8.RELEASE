@@ -16,20 +16,8 @@
 
 package org.springframework.beans.factory.support;
 
-import java.io.Serializable;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.config.BeanPostProcessor;
@@ -40,6 +28,17 @@ import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
+
+import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Adapter that implements the {@link DisposableBean} and {@link Runnable}
@@ -237,12 +236,18 @@ class DisposableBeanAdapter implements DisposableBean, Runnable, Serializable {
 
 	@Override
 	public void destroy() {
+		/**
+		 * 销毁 bean 前的处理
+		 * @see ApplicationListenerDetector
+		 * @see InitDestroyAnnotationBeanPostProcessor
+		 * @see CommonAnnotationBeanPostProcessor
+		 */
 		if (!CollectionUtils.isEmpty(this.beanPostProcessors)) {
 			for (DestructionAwareBeanPostProcessor processor : this.beanPostProcessors) {
 				processor.postProcessBeforeDestruction(this.bean, this.beanName);
 			}
 		}
-
+		// 如果实现了 DisposableBean, 则调用之
 		if (this.invokeDisposableBean) {
 			if (logger.isTraceEnabled()) {
 				logger.trace("Invoking destroy() on bean with name '" + this.beanName + "'");
@@ -268,11 +273,13 @@ class DisposableBeanAdapter implements DisposableBean, Runnable, Serializable {
 				}
 			}
 		}
-
+		// 如果有 destroyMethod, 则调用之
 		if (this.destroyMethod != null) {
 			invokeCustomDestroyMethod(this.destroyMethod);
 		}
+		// 如果有 destroyMethodName, 则调用之
 		else if (this.destroyMethodName != null) {
+			// 根据 destroyMethodName 查找 destroyMethod
 			Method methodToInvoke = determineDestroyMethod(this.destroyMethodName);
 			if (methodToInvoke != null) {
 				invokeCustomDestroyMethod(ClassUtils.getInterfaceMethodIfPossible(methodToInvoke));
@@ -280,7 +287,7 @@ class DisposableBeanAdapter implements DisposableBean, Runnable, Serializable {
 		}
 	}
 
-
+	// 查找 destroyMethod
 	@Nullable
 	private Method determineDestroyMethod(String name) {
 		try {
@@ -304,15 +311,12 @@ class DisposableBeanAdapter implements DisposableBean, Runnable, Serializable {
 				BeanUtils.findMethodWithMinimalParameters(this.bean.getClass().getMethods(), name));
 	}
 
-	/**
-	 * Invoke the specified custom destroy method on the given bean.
-	 * <p>This implementation invokes a no-arg method if found, else checking
-	 * for a method with a single boolean argument (passing in "true",
-	 * assuming a "force" parameter), else logging an error.
-	 */
+	// 调用销毁方法
+	// 销毁方法只能是无参或者有一个boolean类型的方法
 	private void invokeCustomDestroyMethod(final Method destroyMethod) {
 		Class<?>[] paramTypes = destroyMethod.getParameterTypes();
 		final Object[] args = new Object[paramTypes.length];
+		// 构造参数
 		if (paramTypes.length == 1) {
 			args[0] = Boolean.TRUE;
 		}
@@ -320,6 +324,7 @@ class DisposableBeanAdapter implements DisposableBean, Runnable, Serializable {
 			logger.trace("Invoking destroy method '" + this.destroyMethodName +
 					"' on bean with name '" + this.beanName + "'");
 		}
+		// 反射调用 destroyMethod
 		try {
 			if (System.getSecurityManager() != null) {
 				AccessController.doPrivileged((PrivilegedAction<Object>) () -> {

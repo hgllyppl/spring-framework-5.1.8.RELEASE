@@ -1915,13 +1915,11 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		return applyBeanPostProcessorsAfterInitialization(object, beanName);
 	}
 
-	/**
-	 * Overridden to clear FactoryBean instance cache as well.
-	 */
 	@Override
 	protected void removeSingleton(String beanName) {
 		synchronized (getSingletonMutex()) {
 			super.removeSingleton(beanName);
+			// 从 factoryBeanInstanceCache 删除 factoryBeanInstance
 			this.factoryBeanInstanceCache.remove(beanName);
 		}
 	}

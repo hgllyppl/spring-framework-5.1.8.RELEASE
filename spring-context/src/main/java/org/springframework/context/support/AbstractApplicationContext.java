@@ -849,32 +849,26 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
-	 * Actually performs context closing: publishes a ContextClosedEvent and
-	 * destroys the singletons in the bean factory of this application context.
-	 * <p>Called by both {@code close()} and a JVM shutdown hook, if any.
-	 * @see org.springframework.context.event.ContextClosedEvent
-	 * @see #destroyBeans()
+	 * 销毁上下文并发布 {@link ContextClosedEvent}
+	 * 可通过主动调用 {@link #close()} 方法或者注册 JVM shutdown hook
 	 * @see #close()
 	 * @see #registerShutdownHook()
 	 */
 	protected void doClose() {
-		// Check whether an actual close attempt is necessary...
 		if (this.active.get() && this.closed.compareAndSet(false, true)) {
 			if (logger.isDebugEnabled()) {
 				logger.debug("Closing " + this);
 			}
-
+			// 反注册 mBean
 			LiveBeansView.unregisterApplicationContext(this);
-
+			// 发布 ContextClosedEvent
 			try {
-				// Publish shutdown event.
 				publishEvent(new ContextClosedEvent(this));
 			}
 			catch (Throwable ex) {
 				logger.warn("Exception thrown from ApplicationListener handling ContextClosedEvent", ex);
 			}
-
-			// Stop all Lifecycle beans, to avoid delays during individual destruction.
+			// 停止 Lifecycle beans
 			if (this.lifecycleProcessor != null) {
 				try {
 					this.lifecycleProcessor.onClose();
@@ -883,23 +877,18 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 					logger.warn("Exception thrown from LifecycleProcessor on context close", ex);
 				}
 			}
-
-			// Destroy all cached singletons in the context's BeanFactory.
+			// 销毁所有单例 bean
 			destroyBeans();
-
-			// Close the state of this context itself.
+			// 关闭 beanFactory
 			closeBeanFactory();
-
-			// Let subclasses do some final clean-up if they wish...
+			// 提供给子类的处理机会
 			onClose();
-
-			// Reset local application listeners to pre-refresh state.
+			// 清除 applicationListeners
 			if (this.earlyApplicationListeners != null) {
 				this.applicationListeners.clear();
 				this.applicationListeners.addAll(this.earlyApplicationListeners);
 			}
-
-			// Switch to inactive.
+			// 改变激活状态
 			this.active.set(false);
 		}
 	}

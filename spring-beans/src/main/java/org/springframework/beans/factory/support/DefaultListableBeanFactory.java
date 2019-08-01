@@ -1023,6 +1023,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	@Override
 	public void registerSingleton(String beanName, Object singletonObject) throws IllegalStateException {
 		super.registerSingleton(beanName, singletonObject);
+		// 如果可能, 将单例添加进 manualSingletonNames
 		updateManualSingletonNames(set -> set.add(beanName), set -> !this.beanDefinitionMap.containsKey(beanName));
 		clearByTypeCache();
 	}
@@ -1030,6 +1031,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	@Override
 	public void destroySingletons() {
 		super.destroySingletons();
+		// 清空 manualSingletonNames
 		updateManualSingletonNames(Set::clear, set -> !set.isEmpty());
 		clearByTypeCache();
 	}
@@ -1037,6 +1039,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	@Override
 	public void destroySingleton(String beanName) {
 		super.destroySingleton(beanName);
+		// 从 manualSingletonNames 删除 beanName
 		removeManualSingletonName(beanName);
 		clearByTypeCache();
 	}
@@ -1045,11 +1048,13 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		updateManualSingletonNames(set -> set.remove(beanName), set -> set.contains(beanName));
 	}
 
-	// 将 beanName 加入 manualSingletonNames
+	// 更新 manualSingletonNames
 	private void updateManualSingletonNames(Consumer<Set<String>> action, Predicate<Set<String>> condition) {
 		// 如果 beanFacotry 已经开始创建 bean, 则需要加锁地修改 manualSingletonNames
 		if (hasBeanCreationStarted()) {
 			synchronized (this.beanDefinitionMap) {
+				// 根据 condition 判断是否执行 action
+				// action 可增加或删除 manualSingletonNames
 				if (condition.test(this.manualSingletonNames)) {
 					Set<String> updatedSingletons = new LinkedHashSet<>(this.manualSingletonNames);
 					action.accept(updatedSingletons);
@@ -1058,7 +1063,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			}
 		}
 		else {
-			// 如果 beanDefinitionMap 不包含 beanName, 则将 beanName 加入 manualSingletonNames
+			// 无锁的修改 manualSingletonNames, 修改动作同上
 			if (condition.test(this.manualSingletonNames)) {
 				action.accept(this.manualSingletonNames);
 			}
