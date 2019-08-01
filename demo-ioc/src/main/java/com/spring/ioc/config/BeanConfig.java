@@ -4,12 +4,10 @@ import com.spring.ioc.bean.BeanLifeCycle;
 import com.spring.ioc.bean.CircularReferenceA;
 import com.spring.ioc.bean.CircularReferenceB;
 import com.spring.ioc.bean.CustomSmartLifeCycle;
-import com.spring.ioc.bean.StartListener;
 import com.spring.ioc.bean.Student;
 import com.spring.ioc.bean.StudentFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Scope;
 
 import static org.springframework.beans.factory.config.ConfigurableBeanFactory.SCOPE_PROTOTYPE;
@@ -19,7 +17,6 @@ import static org.springframework.beans.factory.config.ConfigurableBeanFactory.S
  * Created by xin on 2019/4/22.
  */
 @Configuration
-@Import(StartListener.class)
 //@ImportResource({"application.properties"})
 public class BeanConfig {
 
