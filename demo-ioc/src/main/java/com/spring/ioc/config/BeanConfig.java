@@ -4,6 +4,8 @@ import com.spring.ioc.bean.BeanLifeCycle;
 import com.spring.ioc.bean.CircularReferenceA;
 import com.spring.ioc.bean.CircularReferenceB;
 import com.spring.ioc.bean.CustomSmartLifeCycle;
+import com.spring.ioc.bean.JavaxAnnoCase;
+import com.spring.ioc.bean.SpringAnnoCase;
 import com.spring.ioc.bean.Student;
 import com.spring.ioc.bean.StudentFactory;
 import org.springframework.context.annotation.Bean;
@@ -36,11 +38,13 @@ public class BeanConfig {
                 .setName("li4")
                 .setScope(SCOPE_PROTOTYPE);
     }
+
     //-------------------------工厂bean---------------------------------------
     @Bean
     public StudentFactory studentFactory() {
         return new StudentFactory();
     }
+
     //-------------------------循环引用---------------------------------------
     @Bean
     public CircularReferenceA circularReferenceA() {
@@ -51,16 +55,19 @@ public class BeanConfig {
     public CircularReferenceB circularReferenceB() {
         return new CircularReferenceB();
     }
+
     //-------------------------bean生命周期---------------------------------------
     @Bean(initMethod = "init", destroyMethod = "destroy")
     public BeanLifeCycle beanLifeCycle() {
         return new BeanLifeCycle();
     }
+
     //-------------------------SmartLifeCycle---------------------------------------
     @Bean
     public CustomSmartLifeCycle customSmartLifeCycle() {
         return new CustomSmartLifeCycle();
     }
+
     //-------------------------同名同类bean---------------------------------------
     @Bean("sameBeanName-sameClass")
     public Student student1() {
@@ -71,6 +78,7 @@ public class BeanConfig {
     public Student student2() {
         return new Student().setName("xiangxiang");
     }
+
     //-------------------------同名不同类bean---------------------------------------
     @Bean("sameBeanName-differenceClass")
     public Student student3() {
@@ -80,5 +88,16 @@ public class BeanConfig {
     @Bean("sameBeanName-differenceClass")
     public BeanLifeCycle student4() {
         return new BeanLifeCycle();
+    }
+
+    //-------------------------autowire anno case---------------------------------------
+    @Bean
+    public JavaxAnnoCase javaxAnnoCase() {
+        return new JavaxAnnoCase();
+    }
+
+    @Bean
+    public SpringAnnoCase springAnnoCase() {
+        return new SpringAnnoCase();
     }
 }
