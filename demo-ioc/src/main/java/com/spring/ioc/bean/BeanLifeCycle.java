@@ -13,12 +13,12 @@ public class BeanLifeCycle implements InitializingBean, DisposableBean {
 
     @PostConstruct
     public void init() {
-        System.out.println("inited");
+        System.out.println("BeanLifeCycle inited");
     }
 
     @PreDestroy
     public void close() {
-        System.out.println("closed");
+        System.out.println("BeanLifeCycle closed");
     }
 
     @Override

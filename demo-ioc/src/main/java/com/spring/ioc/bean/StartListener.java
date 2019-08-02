@@ -21,6 +21,6 @@ public class StartListener implements ApplicationListener<ContextRefreshedEvent>
 
     @EventListener
     public void eventListener2(String msg) {
-        System.out.println("StartListener " + msg);
+        System.out.println("StartListener handle " + msg);
     }
 }

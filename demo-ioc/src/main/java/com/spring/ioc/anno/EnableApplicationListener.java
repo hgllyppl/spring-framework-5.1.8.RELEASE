@@ -16,5 +16,5 @@ import java.lang.annotation.Target;
 @Import(ApplicationListenerConfig.class)
 public @interface EnableApplicationListener {
 
-    String condition() default "test";
+    String condition() default "EnableApplicationListener test";
 }
