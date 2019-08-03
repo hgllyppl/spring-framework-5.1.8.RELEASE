@@ -1,5 +1,6 @@
 package com.spring.ioc.config;
 
+import com.google.common.collect.Lists;
 import com.spring.ioc.bean.BeanLifeCycle;
 import com.spring.ioc.bean.CircularReferenceA;
 import com.spring.ioc.bean.CircularReferenceB;
@@ -8,9 +9,13 @@ import com.spring.ioc.bean.JavaxAnnoCase;
 import com.spring.ioc.bean.SpringAnnoCase;
 import com.spring.ioc.bean.Student;
 import com.spring.ioc.bean.StudentFactory;
+import com.spring.ioc.bean.ViewProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Scope;
+
+import java.util.List;
 
 import static org.springframework.beans.factory.config.ConfigurableBeanFactory.SCOPE_PROTOTYPE;
 import static org.springframework.beans.factory.config.ConfigurableBeanFactory.SCOPE_SINGLETON;
@@ -99,5 +104,20 @@ public class BeanConfig {
     @Bean
     public SpringAnnoCase springAnnoCase() {
         return new SpringAnnoCase();
+    }
+
+    @Bean
+    public ViewProperty viewProperty2() {
+        return new ViewProperty();
+    }
+
+    @Bean
+    public String[] injectArray() {
+        return new String[] {"1"};
+    }
+
+    @Bean @Primary
+    public List<String> injectList() {
+        return Lists.newArrayList("1");
     }
 }

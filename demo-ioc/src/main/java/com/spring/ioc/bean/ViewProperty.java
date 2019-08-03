@@ -10,10 +10,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class ViewProperty {
 
-    @Value("yml.a")
+    @Value("${yml.a}")
     private String ymlA;
 
-    @Value("prop.a")
+    @Value("${prop.a}")
     private String propA;
 
     public String getPropA() {

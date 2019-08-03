@@ -17,7 +17,7 @@ public class IocMain {
     public static void main(String[] args) {
         ConfigurableApplicationContext ctx = new AnnotationConfigApplicationContext(IocMain.class);
         ctx.registerShutdownHook();
-        System.out.println(ctx.getBean(ViewProperty.class));
+        System.out.println(ctx.getBean("viewProperty", ViewProperty.class));
         ctx.getBeanNamesForType(StudentFactory.class, true, false);
     }
 }
