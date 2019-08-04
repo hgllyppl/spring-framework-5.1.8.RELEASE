@@ -171,24 +171,24 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 			ejbRefClass = null;
 		}
 	}
-
+	// 忽略的资源列表
 	private final Set<String> ignoredResourceTypes = new HashSet<>(1);
-
+	// ejb 相关
 	private boolean fallbackToDefaultTypeMatch = true;
-
+	// ejb 相关
 	private boolean alwaysUseJndiLookup = false;
-
+	// ejb 相关
 	private transient BeanFactory jndiFactory = new SimpleJndiBeanFactory();
-
+	// beanFactory
 	@Nullable
 	private transient BeanFactory resourceFactory;
-
+	// beanFactory
 	@Nullable
 	private transient BeanFactory beanFactory;
-
+	// StringValueResolver
 	@Nullable
 	private transient StringValueResolver embeddedValueResolver;
-
+	// 注入缓存
 	private final transient Map<String, InjectionMetadata> injectionMetadataCache = new ConcurrentHashMap<>(256);
 
 	public CommonAnnotationBeanPostProcessor() {
