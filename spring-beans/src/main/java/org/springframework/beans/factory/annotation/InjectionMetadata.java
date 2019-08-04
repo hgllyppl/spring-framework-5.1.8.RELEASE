@@ -48,21 +48,24 @@ import org.springframework.util.ReflectionUtils;
 public class InjectionMetadata {
 
 	private static final Log logger = LogFactory.getLog(InjectionMetadata.class);
-
+	// 被注入的类类型
 	private final Class<?> targetClass;
-
+	// 需要注入的元素集合
 	private final Collection<InjectedElement> injectedElements;
 
 	@Nullable
 	private volatile Set<InjectedElement> checkedElements;
-
 
 	public InjectionMetadata(Class<?> targetClass, Collection<InjectedElement> elements) {
 		this.targetClass = targetClass;
 		this.injectedElements = elements;
 	}
 
-
+	/**
+	 * 将 injectedElements 转换成 checkedElements
+	 * 并将 {@link InjectedElement#getMember()} 加入 beanDefinition
+	 * @param beanDefinition
+     */
 	public void checkConfigMembers(RootBeanDefinition beanDefinition) {
 		Set<InjectedElement> checkedElements = new LinkedHashSet<>(this.injectedElements.size());
 		for (InjectedElement element : this.injectedElements) {
@@ -78,10 +81,13 @@ public class InjectionMetadata {
 		this.checkedElements = checkedElements;
 	}
 
+	/**
+	 * 遍历 checkedElements 或 injectedElements 并注入
+	 * @see InjectedElement#inject(Object, String, PropertyValues)
+     */
 	public void inject(Object target, @Nullable String beanName, @Nullable PropertyValues pvs) throws Throwable {
 		Collection<InjectedElement> checkedElements = this.checkedElements;
-		Collection<InjectedElement> elementsToIterate =
-				(checkedElements != null ? checkedElements : this.injectedElements);
+		Collection<InjectedElement> elementsToIterate = (checkedElements != null ? checkedElements : this.injectedElements);
 		if (!elementsToIterate.isEmpty()) {
 			for (InjectedElement element : elementsToIterate) {
 				if (logger.isTraceEnabled()) {
@@ -107,24 +113,23 @@ public class InjectionMetadata {
 		}
 	}
 
-
+	// 是否需要刷新 InjectionMetadata
 	public static boolean needsRefresh(@Nullable InjectionMetadata metadata, Class<?> clazz) {
 		return (metadata == null || metadata.targetClass != clazz);
 	}
 
-
 	/**
-	 * A single injected element.
+	 * InjectedElement
 	 */
 	public abstract static class InjectedElement {
-
+		// field or method
 		protected final Member member;
-
+		// member 是否 field
 		protected final boolean isField;
-
+		// pd, member 是 method 时使用
 		@Nullable
 		protected final PropertyDescriptor pd;
-
+		//
 		@Nullable
 		protected volatile Boolean skip;
 
@@ -169,7 +174,7 @@ public class InjectionMetadata {
 		}
 
 		/**
-		 * Either this or {@link #getResourceToInject} needs to be overridden.
+		 * 注入属性, 通过 {@link #getResourceToInject} 获取需要注入的资源, 由子类覆盖
 		 */
 		protected void inject(Object target, @Nullable String requestingBeanName, @Nullable PropertyValues pvs)
 				throws Throwable {
@@ -244,7 +249,7 @@ public class InjectionMetadata {
 		}
 
 		/**
-		 * Either this or {@link #inject} needs to be overridden.
+		 * 获取注入资源, 由子类覆盖
 		 */
 		@Nullable
 		protected Object getResourceToInject(Object target, @Nullable String requestingBeanName) {

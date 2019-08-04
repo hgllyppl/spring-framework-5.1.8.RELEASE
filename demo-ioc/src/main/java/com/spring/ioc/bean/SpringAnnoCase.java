@@ -23,14 +23,22 @@ public class SpringAnnoCase {
     @Autowired
     private ApplicationContext applicationContext;
 
+    /**
+     * array 和 list 的注入要注意, beanFactory 并不是优先注入名字相匹配的 bean
+     * 而是优先查找跟数组类型或泛型相符合的 bean, 如果找得到就将其组合成 array 和 list 返回
+     * 找不到才去找跟名字相符合的 bean
+     */
     @Autowired
     private String[] injectArray;
 
-    @Autowired
-    private Map<String, Object> injectMap;
-
     @Autowired @Qualifier("injectList")
     private List<String> injectList;
+
+    /**
+     * map 注入注意, key 必须是 string, val 注入的是任意类型的集合
+     */
+    @Autowired
+    private Map<String, Object> injectMap;
 
     @Autowired
     private Optional<Object> optional;
