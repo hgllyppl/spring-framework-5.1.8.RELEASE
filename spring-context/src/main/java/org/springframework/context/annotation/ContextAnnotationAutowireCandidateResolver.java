@@ -16,14 +16,6 @@
 
 package org.springframework.context.annotation;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.springframework.aop.TargetSource;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -34,6 +26,14 @@ import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Complete implementation of the
@@ -48,10 +48,12 @@ public class ContextAnnotationAutowireCandidateResolver extends QualifierAnnotat
 
 	@Override
 	@Nullable
+	// 是否延迟加载 ? 返回代理 : 返回 Null
 	public Object getLazyResolutionProxyIfNecessary(DependencyDescriptor descriptor, @Nullable String beanName) {
 		return (isLazy(descriptor) ? buildLazyResolutionProxy(descriptor, beanName) : null);
 	}
 
+	// 判断 field/method 上是否带 @Lazy
 	protected boolean isLazy(DependencyDescriptor descriptor) {
 		for (Annotation ann : descriptor.getAnnotations()) {
 			Lazy lazy = AnnotationUtils.getAnnotation(ann, Lazy.class);
@@ -72,10 +74,12 @@ public class ContextAnnotationAutowireCandidateResolver extends QualifierAnnotat
 		return false;
 	}
 
+	// 构建代理
 	protected Object buildLazyResolutionProxy(final DependencyDescriptor descriptor, final @Nullable String beanName) {
 		Assert.state(getBeanFactory() instanceof DefaultListableBeanFactory,
 				"BeanFactory needs to be a DefaultListableBeanFactory");
 		final DefaultListableBeanFactory beanFactory = (DefaultListableBeanFactory) getBeanFactory();
+		// 构建目标类
 		TargetSource ts = new TargetSource() {
 			@Override
 			public Class<?> getTargetClass() {
@@ -108,12 +112,14 @@ public class ContextAnnotationAutowireCandidateResolver extends QualifierAnnotat
 			public void releaseTarget(Object target) {
 			}
 		};
+		// 构建代理工厂
 		ProxyFactory pf = new ProxyFactory();
 		pf.setTargetSource(ts);
 		Class<?> dependencyType = descriptor.getDependencyType();
 		if (dependencyType.isInterface()) {
 			pf.addInterface(dependencyType);
 		}
+		// 构建代理
 		return pf.getProxy(beanFactory.getBeanClassLoader());
 	}
 

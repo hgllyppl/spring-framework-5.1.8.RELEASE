@@ -16,19 +16,8 @@
 
 package org.springframework.beans.factory.config;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.Serializable;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.Map;
-import java.util.Optional;
-
 import kotlin.reflect.KProperty;
 import kotlin.reflect.jvm.ReflectJvmMapping;
-
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.InjectionPoint;
@@ -41,6 +30,16 @@ import org.springframework.core.ResolvableType;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.Serializable;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Descriptor for a specific dependency that is about to be injected.
@@ -159,17 +158,13 @@ public class DependencyDescriptor extends InjectionPoint implements Serializable
 
 
 	/**
-	 * Return whether this dependency is required.
-	 * <p>Optional semantics are derived from Java 8's {@link java.util.Optional},
-	 * any variant of a parameter-level {@code Nullable} annotation (such as from
-	 * JSR-305 or the FindBugs set of annotations), or a language-level nullable
-	 * type declaration in Kotlin.
+	 * 是否必须注入
 	 */
 	public boolean isRequired() {
 		if (!this.required) {
 			return false;
 		}
-
+		// 如果"field"非空且不带"Optional"、"nullable"等注解, 则必须注入
 		if (this.field != null) {
 			return !(this.field.getType() == Optional.class || hasNullableAnnotation() ||
 					(KotlinDetector.isKotlinReflectPresent() &&
@@ -177,6 +172,7 @@ public class DependencyDescriptor extends InjectionPoint implements Serializable
 							KotlinDelegate.isNullable(this.field)));
 		}
 		else {
+			// 如果"methodParameter"非空且不带"Optional"、"nullable"等注解, 则必须注入
 			return !obtainMethodParameter().isOptional();
 		}
 	}

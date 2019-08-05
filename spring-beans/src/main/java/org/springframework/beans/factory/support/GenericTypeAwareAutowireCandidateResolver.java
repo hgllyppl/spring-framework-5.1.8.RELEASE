@@ -16,9 +16,6 @@
 
 package org.springframework.beans.factory.support;
 
-import java.lang.reflect.Method;
-import java.util.Properties;
-
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.FactoryBean;
@@ -29,6 +26,9 @@ import org.springframework.beans.factory.config.DependencyDescriptor;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
+
+import java.lang.reflect.Method;
+import java.util.Properties;
 
 /**
  * Basic {@link AutowireCandidateResolver} that performs a full generic type
@@ -59,27 +59,31 @@ public class GenericTypeAwareAutowireCandidateResolver extends SimpleAutowireCan
 		return this.beanFactory;
 	}
 
-
+	/**
+	 * 根据超类和泛型判断是否允许自动注入
+	 * 如果超类方法允许自动注入且泛型匹配成功, 则允许自动注入
+	 * @param bdHolder 被依赖的资源 BeanDefinitionHolder
+	 * @param descriptor 依赖描述符
+	 * @return
+	 */
 	@Override
 	public boolean isAutowireCandidate(BeanDefinitionHolder bdHolder, DependencyDescriptor descriptor) {
+		// 从超类方法判断是否允许自动注入
 		if (!super.isAutowireCandidate(bdHolder, descriptor)) {
-			// If explicitly false, do not proceed with any other checks...
 			return false;
 		}
+		// 被依赖方是否和依赖方的泛型类型匹配
 		return checkGenericTypeMatch(bdHolder, descriptor);
 	}
 
-	/**
-	 * Match the given dependency type with its generic type information against the given
-	 * candidate bean definition.
-	 */
 	protected boolean checkGenericTypeMatch(BeanDefinitionHolder bdHolder, DependencyDescriptor descriptor) {
+		// 取依赖方类型
+		// 如果依赖方类型不是泛型, 则直接返回 true
 		ResolvableType dependencyType = descriptor.getResolvableType();
 		if (dependencyType.getType() instanceof Class) {
-			// No generic type -> we know it's a Class type-match, so no need to check again.
 			return true;
 		}
-
+		// 取被依赖方类型
 		ResolvableType targetType = null;
 		boolean cacheType = false;
 		RootBeanDefinition rbd = null;
@@ -88,14 +92,16 @@ public class GenericTypeAwareAutowireCandidateResolver extends SimpleAutowireCan
 		}
 		if (rbd != null) {
 			targetType = rbd.targetType;
+			// 如果 targetType 为 null, 则从 FactoryMethod 取
 			if (targetType == null) {
 				cacheType = true;
-				// First, check factory method return type, if applicable
 				targetType = getReturnTypeForFactoryMethod(rbd, descriptor);
+				// 如果 targetType 还是为 null, 则从 DecoratedDefinition 取
 				if (targetType == null) {
 					RootBeanDefinition dbd = getResolvedDecoratedDefinition(rbd);
 					if (dbd != null) {
 						targetType = dbd.targetType;
+						// 如果 targetType 仍然为 null, 则从 FactoryMethod 取
 						if (targetType == null) {
 							targetType = getReturnTypeForFactoryMethod(dbd, descriptor);
 						}
@@ -103,9 +109,8 @@ public class GenericTypeAwareAutowireCandidateResolver extends SimpleAutowireCan
 				}
 			}
 		}
-
+		// 如果 targetType 仍然为 null, 则从 beanFactory 取 beanName 对应的类型
 		if (targetType == null) {
-			// Regular case: straight bean instance, with BeanFactory available.
 			if (this.beanFactory != null) {
 				Class<?> beanType = this.beanFactory.getType(bdHolder.getBeanName());
 				if (beanType != null) {
@@ -121,10 +126,11 @@ public class GenericTypeAwareAutowireCandidateResolver extends SimpleAutowireCan
 				}
 			}
 		}
-
+		// 取不到被依赖方类型, 则返回 true
 		if (targetType == null) {
 			return true;
 		}
+		// 缓存被依赖方类型
 		if (cacheType) {
 			rbd.targetType = targetType;
 		}
@@ -135,7 +141,7 @@ public class GenericTypeAwareAutowireCandidateResolver extends SimpleAutowireCan
 			// Map<Object,Object>, java.util.Properties is usually perceived as a Map<String,String>).
 			return true;
 		}
-		// Full check for complex generic type match...
+		// 判断"被依赖方"是否和"依赖方"的泛型类型匹配
 		return dependencyType.isAssignableFrom(targetType);
 	}
 
@@ -154,17 +160,20 @@ public class GenericTypeAwareAutowireCandidateResolver extends SimpleAutowireCan
 		return null;
 	}
 
+	// 根据 BeanDefinition 取 bean 的类型
 	@Nullable
 	protected ResolvableType getReturnTypeForFactoryMethod(RootBeanDefinition rbd, DependencyDescriptor descriptor) {
-		// Should typically be set for any kind of factory method, since the BeanFactory
-		// pre-resolves them before reaching out to the AutowireCandidateResolver...
+		// 取 factoryMethodReturnType
 		ResolvableType returnType = rbd.factoryMethodReturnType;
+		// 如果 factoryMethodReturnType 为 null, 则取 factoryMethod
 		if (returnType == null) {
 			Method factoryMethod = rbd.getResolvedFactoryMethod();
+			// 取 factoryMethod 的返回类型
 			if (factoryMethod != null) {
 				returnType = ResolvableType.forMethodReturnType(factoryMethod);
 			}
 		}
+		// 判断 returnType 是否和"依赖方类型"匹配
 		if (returnType != null) {
 			Class<?> resolvedClass = returnType.resolve();
 			if (resolvedClass != null && descriptor.getDependencyType().isAssignableFrom(resolvedClass)) {

@@ -16,13 +16,6 @@
 
 package org.springframework.beans.factory.annotation;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.Method;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
-
 import org.springframework.beans.SimpleTypeConverter;
 import org.springframework.beans.TypeConverter;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -41,6 +34,13 @@ import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Method;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * {@link AutowireCandidateResolver} implementation that matches bean definition qualifiers
@@ -129,7 +129,6 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 		this.valueAnnotationType = valueAnnotationType;
 	}
 
-
 	/**
 	 * Determine whether the provided bean definition is an autowire candidate.
 	 * <p>To be considered a candidate the bean's <em>autowire-candidate</em>
@@ -140,12 +139,23 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 	 * the same qualifier or match by meta attributes. A "value" attribute will
 	 * fallback to match against the bean name or an alias if a qualifier or
 	 * attribute does not match.
+	 *
+	 * 根据超类和限定符判断是否允许自动注入
+	 * 如果超类方法允许自动注入且限定符匹配成功, 则允许自动注入
+	 * 限定符成功条件:
+	 * 1、在"被依赖方"和"依赖方"同时使用限定符
+	 * 2、在"被依赖方"使用限定符, 但"限定符的值"和"依赖方的名称"完全匹配
 	 * @see Qualifier
-	 */
+	 * @param bdHolder 被依赖的资源 BeanDefinitionHolder
+	 * @param descriptor 依赖描述符
+     * @return
+     */
 	@Override
 	public boolean isAutowireCandidate(BeanDefinitionHolder bdHolder, DependencyDescriptor descriptor) {
+		// 从超类方法判断是否允许自动注入
 		boolean match = super.isAutowireCandidate(bdHolder, descriptor);
 		if (match) {
+			// TODO
 			match = checkQualifiers(bdHolder, descriptor.getAnnotations());
 			if (match) {
 				MethodParameter methodParam = descriptor.getMethodParameter();
@@ -310,10 +320,9 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 		return (resolvedFactoryMethod != null ? AnnotationUtils.getAnnotation(resolvedFactoryMethod, type) : null);
 	}
 
-
 	/**
-	 * Determine whether the given dependency declares an autowired annotation,
-	 * checking its required flag.
+	 * 根据"超类"和"Autowired"判断是否必须注入
+	 * 如果"超类方法返回true"且"Autowired.required() = true", 则必须注入
 	 * @see Autowired#required()
 	 */
 	@Override
@@ -340,10 +349,7 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 		return false;
 	}
 
-	/**
-	 * Determine whether the given dependency declares a value annotation.
-	 * @see Value
-	 */
+	// 在 field/method 上查找 Value 注解并返回其值
 	@Override
 	@Nullable
 	public Object getSuggestedValue(DependencyDescriptor descriptor) {
@@ -357,9 +363,7 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 		return value;
 	}
 
-	/**
-	 * Determine a suggested value from any of the given candidate annotations.
-	 */
+	// 查找 Value 注解并返回其值
 	@Nullable
 	protected Object findValue(Annotation[] annotationsToSearch) {
 		if (annotationsToSearch.length > 0) {   // qualifier annotations have to be local
@@ -372,10 +376,7 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 		return null;
 	}
 
-	/**
-	 * Extract the value attribute from the given annotation.
-	 * @since 4.3
-	 */
+	// 获取 Value 注解值
 	protected Object extractValue(AnnotationAttributes attr) {
 		Object value = attr.get(AnnotationUtils.VALUE);
 		if (value == null) {

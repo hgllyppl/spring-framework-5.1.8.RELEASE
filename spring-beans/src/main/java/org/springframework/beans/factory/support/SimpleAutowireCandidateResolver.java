@@ -30,11 +30,18 @@ import org.springframework.lang.Nullable;
  */
 public class SimpleAutowireCandidateResolver implements AutowireCandidateResolver {
 
+	/**
+	 * 根据"被依赖方BeanDefinition"判断是否允许自动注入, 默认 true
+	 * @param bdHolder 被依赖的资源 BeanDefinitionHolder
+	 * @param descriptor 依赖描述符
+     * @return
+     */
 	@Override
 	public boolean isAutowireCandidate(BeanDefinitionHolder bdHolder, DependencyDescriptor descriptor) {
 		return bdHolder.getBeanDefinition().isAutowireCandidate();
 	}
-
+	
+	// 根据"依赖描述符"判断是否必须注入
 	@Override
 	public boolean isRequired(DependencyDescriptor descriptor) {
 		return descriptor.isRequired();
