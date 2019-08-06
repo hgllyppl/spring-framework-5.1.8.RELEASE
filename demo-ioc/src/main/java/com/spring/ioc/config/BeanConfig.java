@@ -24,8 +24,7 @@ import static org.springframework.beans.factory.config.ConfigurableBeanFactory.S
  * Created by xin on 2019/4/22.
  */
 @Configuration
-//@ImportResource({"application.properties"})
-public class BeanConfig {
+public class BeanConfig extends TestForSuperClassBean implements TestForInterfaceBean {
 
     //-------------------------作用域---------------------------------------
     @Bean

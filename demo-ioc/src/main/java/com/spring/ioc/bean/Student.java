@@ -1,5 +1,6 @@
 package com.spring.ioc.bean;
 
+import com.alibaba.fastjson.JSON;
 import org.springframework.util.ObjectUtils;
 
 /**
@@ -38,5 +39,8 @@ public class Student {
         return this;
     }
 
-
+    @Override
+    public String toString() {
+        return JSON.toJSONString(this);
+    }
 }
