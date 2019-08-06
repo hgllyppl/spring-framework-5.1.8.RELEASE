@@ -59,6 +59,7 @@ import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.ConfigurablePropertyResolver;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.core.io.DefaultResourceLoader;
@@ -70,6 +71,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.ReflectionUtils;
+import org.springframework.util.StringValueResolver;
 
 import javax.annotation.PreDestroy;
 import java.io.IOException;
@@ -729,7 +731,11 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			beanFactory.setConversionService(
 					beanFactory.getBean(CONVERSION_SERVICE_BEAN_NAME, ConversionService.class));
 		}
-		// 如果没有 EmbeddedValueResolver 则添加一个缺省的 StringValueResolver
+		/**
+		 * 如果没有 EmbeddedValueResolver 则添加一个缺省的 StringValueResolver
+		 * 如果有 PropertySourcesPlaceholderConfigurer, 则会提前添加一个 StringValueResolver
+		 * @see PropertySourcesPlaceholderConfigurer#postProcessBeanFactory
+		 */
 		if (!beanFactory.hasEmbeddedValueResolver()) {
 			beanFactory.addEmbeddedValueResolver(strVal -> getEnvironment().resolvePlaceholders(strVal));
 		}
