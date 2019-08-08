@@ -16,12 +16,6 @@
 
 package org.springframework.context.annotation;
 
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
-
 import org.springframework.beans.factory.parsing.Location;
 import org.springframework.beans.factory.parsing.Problem;
 import org.springframework.beans.factory.parsing.ProblemReporter;
@@ -34,6 +28,12 @@ import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
+
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Represents a user-defined {@link Configuration @Configuration} class.
@@ -211,13 +211,14 @@ final class ConfigurationClass {
 	}
 
 	public void validate(ProblemReporter problemReporter) {
-		// A configuration class may not be final (CGLIB limitation)
+		// CGLIB 代理限制
+		// 配置类如果带有 @Configuration, 则不能是 final 类型的 class,
 		if (getMetadata().isAnnotated(Configuration.class.getName())) {
 			if (getMetadata().isFinal()) {
 				problemReporter.error(new FinalConfigurationProblem());
 			}
 		}
-
+		// 配置类上如果有 beanMethod, 则此 beanMethod 必须是可重载的
 		for (BeanMethod beanMethod : this.beanMethods) {
 			beanMethod.validate(problemReporter);
 		}

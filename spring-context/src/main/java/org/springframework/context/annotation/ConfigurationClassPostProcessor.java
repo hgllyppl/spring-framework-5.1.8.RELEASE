@@ -112,7 +112,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	private final Set<Integer> registriesPostProcessed = new HashSet<>();
 	// 已调用 postProcessBeanFactory 的 beanFactoryId
 	private final Set<Integer> factoriesPostProcessed = new HashSet<>();
-	// TODO
+	// Bean Definition Reader
 	@Nullable
 	private ConfigurationClassBeanDefinitionReader reader;
 	// 设置 BeanNameGenerator flag
@@ -293,26 +293,25 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		if (this.environment == null) {
 			this.environment = new StandardEnvironment();
 		}
-		// TODO Parse each @Configuration class
+		// 准备解析配置类
 		ConfigurationClassParser parser = new ConfigurationClassParser(
 				this.metadataReaderFactory, this.problemReporter, this.environment,
 				this.resourceLoader, this.componentScanBeanNameGenerator, registry);
-		//
 		Set<BeanDefinitionHolder> bootstrapConfigs = new LinkedHashSet<>(originalConfigs);
 		Set<ConfigurationClass> alreadyParsedConfigs = new HashSet<>(originalConfigs.size());
 		do {
-			// TODO 解析验证
+			// 解析并验证配置类
 			parser.parse(bootstrapConfigs);
 			parser.validate();
-			//
+			// 准备读取 BeanDefinition
 			Set<ConfigurationClass> currentConfigs = new LinkedHashSet<>(parser.getConfigurationClasses());
 			currentConfigs.removeAll(alreadyParsedConfigs);
-			// 读取 BeanDefinition
 			if (this.reader == null) {
 				this.reader = new ConfigurationClassBeanDefinitionReader(
 						registry, this.sourceExtractor, this.resourceLoader, this.environment,
 						this.importBeanNameGenerator, parser.getImportRegistry());
 			}
+			// 读取 BeanDefinition
 			this.reader.loadBeanDefinitions(currentConfigs);
 			// 记录已解析的配置类
 			alreadyParsedConfigs.addAll(currentConfigs);
@@ -388,7 +387,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			try {
 				Class<?> configClass = beanDef.resolveBeanClass(this.beanClassLoader);
 				if (configClass != null) {
-					// TODO
+					// TODO 代理行为
 					Class<?> enhancedClass = enhancer.enhance(configClass, this.beanClassLoader);
 					if (configClass != enhancedClass) {
 						if (logger.isTraceEnabled()) {

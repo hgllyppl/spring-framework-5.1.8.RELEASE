@@ -10,6 +10,7 @@ import com.spring.ioc.bean.SpringAnnoCase;
 import com.spring.ioc.bean.Student;
 import com.spring.ioc.bean.StudentFactory;
 import com.spring.ioc.bean.ViewProperty;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -72,26 +73,15 @@ public class BeanConfig extends BeanConfigSuperClass implements BeanConfigInterf
         return new CustomSmartLifeCycle();
     }
 
-    //-------------------------同名同类bean---------------------------------------
-    @Bean("sameBeanName-sameClass")
-    public Student student1() {
-        return new Student().setName("xiao2");
-    }
-
-    @Bean("sameBeanName-sameClass")
-    public Student student2() {
-        return new Student().setName("xiangxiang");
-    }
-
-    //-------------------------同名不同类bean---------------------------------------
-    @Bean("sameBeanName-differenceClass")
-    public Student student3() {
+    //-------------------------同名bean---------------------------------------
+    @Bean
+    public Student student() {
         return new Student().setName("qiangqiang");
     }
 
-    @Bean("sameBeanName-differenceClass")
-    public BeanLifeCycle student4() {
-        return new BeanLifeCycle();
+    @Bean
+    public Student student(@Autowired(required = false) String name) {
+        return new Student().setName(name);
     }
 
     //-------------------------autowire anno case---------------------------------------

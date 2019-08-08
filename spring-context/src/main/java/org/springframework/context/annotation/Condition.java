@@ -42,12 +42,7 @@ import org.springframework.core.type.AnnotatedTypeMetadata;
 public interface Condition {
 
 	/**
-	 * Determine if the condition matches.
-	 * @param context the condition context
-	 * @param metadata metadata of the {@link org.springframework.core.type.AnnotationMetadata class}
-	 * or {@link org.springframework.core.type.MethodMetadata method} being checked
-	 * @return {@code true} if the condition matches and the component can be registered,
-	 * or {@code false} to veto the annotated component's registration
+	 * 根据给定的 ConditionContext、metadata 判断条件是否成立
 	 */
 	boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata);
 

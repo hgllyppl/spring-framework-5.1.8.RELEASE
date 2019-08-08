@@ -29,11 +29,8 @@ package org.springframework.context.annotation;
  */
 public interface ConfigurationCondition extends Condition {
 
-	/**
-	 * Return the {@link ConfigurationPhase} in which the condition should be evaluated.
-	 */
+	// 执行条件判断时, beanFactory 应处于何种阶段
 	ConfigurationPhase getConfigurationPhase();
-
 
 	/**
 	 * The various configuration phases where the condition could be evaluated.
