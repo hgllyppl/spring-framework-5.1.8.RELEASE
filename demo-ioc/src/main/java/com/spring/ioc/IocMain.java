@@ -3,7 +3,7 @@ package com.spring.ioc;
 import com.spring.ioc.anno.EnableApplicationListener;
 import com.spring.ioc.anno.SpringApplicationCondition;
 import com.spring.ioc.bean.StudentFactory;
-import com.spring.ioc.bean.ViewProperty;
+import com.spring.ioc.config.BeanConfig;
 import com.spring.ioc.config.DeferredImportSelectorConfig;
 import com.spring.ioc.config.ImportBeanDefConfig;
 import com.spring.ioc.config.ImportSelectorConfig;
@@ -29,7 +29,14 @@ public class IocMain {
     public static void main(String[] args) {
         ConfigurableApplicationContext ctx = new AnnotationConfigApplicationContext(IocMain.class);
         ctx.registerShutdownHook();
-        System.out.println(ctx.getBean("viewProperty", ViewProperty.class));
-        ctx.getBeanNamesForType(StudentFactory.class, true, false);
+        // TODO ? 获取 工厂bean
+        ctx.getBean(StudentFactory.class);
+        ctx.getBean("&studentFactory");
+        // 获取 bean
+        ctx.getBean("studentFactory");
+        // lookup
+        BeanConfig beanConfig = ctx.getBean(BeanConfig.class);
+        System.out.println(beanConfig.getStudent());
+        System.out.println(beanConfig.getStudent());
     }
 }

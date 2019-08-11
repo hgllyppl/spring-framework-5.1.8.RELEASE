@@ -11,8 +11,12 @@ import com.spring.ioc.bean.Student;
 import com.spring.ioc.bean.StudentFactory;
 import com.spring.ioc.bean.ViewProperty;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Lookup;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Scope;
 
@@ -26,6 +30,12 @@ import static org.springframework.beans.factory.config.ConfigurableBeanFactory.S
  */
 @Configuration
 public class BeanConfig extends BeanConfigSuperClass implements BeanConfigInterface {
+
+    private ApplicationContext applicationContext;
+
+    public BeanConfig(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
+    }
 
     //-------------------------作用域---------------------------------------
     @Bean
@@ -46,7 +56,7 @@ public class BeanConfig extends BeanConfigSuperClass implements BeanConfigInterf
 
     //-------------------------工厂bean---------------------------------------
     @Bean
-    public StudentFactory studentFactory() {
+    public <T> StudentFactory studentFactory(List<T> list) {
         return new StudentFactory();
     }
 
@@ -91,6 +101,7 @@ public class BeanConfig extends BeanConfigSuperClass implements BeanConfigInterf
     }
 
     @Bean
+    @DependsOn("javaxAnnoCase")
     public SpringAnnoCase springAnnoCase() {
         return new SpringAnnoCase();
     }
@@ -108,5 +119,19 @@ public class BeanConfig extends BeanConfigSuperClass implements BeanConfigInterf
     @Bean @Primary
     public List<String> injectList() {
         return Lists.newArrayList("1");
+    }
+
+    //-------------------------TODO---------------------------------------
+    @Bean
+    public Student studentForArgs(@Value("${student.id}") String studentId,
+                                  @Value("${student.name}")String studentName,
+                                  @Value("${student.scope}")String studentScope) {
+        return new Student(studentId, studentName, studentScope);
+    }
+
+    //-------------------------lookup case---------------------------------------
+    @Lookup("studentSingleton")
+    public Student getStudent() {
+        return null;
     }
 }

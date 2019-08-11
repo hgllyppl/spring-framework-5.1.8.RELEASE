@@ -5,3 +5,9 @@ yml:
   c: 6
 
 viewProperty: viewProperty
+importResourceStudentName: import-resource-z3
+
+student:
+  id: id-test-for-Args
+  name: name-test-for-Args
+  scope: scope-test-for-Args

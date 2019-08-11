@@ -12,6 +12,15 @@ public class Student {
     private String name;
     private String scope;
 
+    public Student() {
+    }
+
+    public Student(String id, String name, String scope) {
+        this.id = id;
+        this.name = name;
+        this.scope = scope;
+    }
+
     public String getId() {
         return id;
     }
