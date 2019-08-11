@@ -26,6 +26,7 @@ import java.security.PrivilegedExceptionAction;
 import org.springframework.beans.BeanInstantiationException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.annotation.Lookup;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ReflectionUtils;
@@ -56,19 +57,26 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 		return currentlyInvokedFactoryMethod.get();
 	}
 
-
+	/**
+	 * 使用无参的构造方法实例化
+	 * @see AbstractAutowireCapableBeanFactory#createBeanInstance
+	 * @see AbstractAutowireCapableBeanFactory#instantiateBean
+     */
 	@Override
 	public Object instantiate(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner) {
-		// Don't override the class with CGLIB if no overrides.
+		// 如果没有方法被覆盖，则使用反射实例化
 		if (!bd.hasMethodOverrides()) {
 			Constructor<?> constructorToUse;
 			synchronized (bd.constructorArgumentLock) {
 				constructorToUse = (Constructor<?>) bd.resolvedConstructorOrFactoryMethod;
+				// 取缺省的构造方法
 				if (constructorToUse == null) {
 					final Class<?> clazz = bd.getBeanClass();
+					// 如果 clazz 是接口，则抛出异常
 					if (clazz.isInterface()) {
 						throw new BeanInstantiationException(clazz, "Specified class is an interface");
 					}
+					// 读取缺省的构造方法并缓存之
 					try {
 						if (System.getSecurityManager() != null) {
 							constructorToUse = AccessController.doPrivileged(
@@ -84,10 +92,14 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 					}
 				}
 			}
+			// 使用构造方法实例化
 			return BeanUtils.instantiateClass(constructorToUse);
 		}
+		/**
+		 * 反之，则使用 cglib 反射实例化
+		 * @see Lookup
+		 */
 		else {
-			// Must generate CGLIB subclass.
 			return instantiateWithMethodInjection(bd, beanName, owner);
 		}
 	}
@@ -102,13 +114,19 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 		throw new UnsupportedOperationException("Method Injection not supported in SimpleInstantiationStrategy");
 	}
 
+	/**
+	 * 使用带参数的构造方法实例化
+	 * @see AbstractAutowireCapableBeanFactory#createBeanInstance
+	 * @see AbstractAutowireCapableBeanFactory#autowireConstructor
+	 * @see ConstructorResolver#autowireConstructor
+	 * @see ConstructorResolver#instantiate(String, RootBeanDefinition, Constructor, Object[])
+	 */
 	@Override
 	public Object instantiate(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner,
 			final Constructor<?> ctor, Object... args) {
-
+		// 如果没有方法被覆盖，则使用反射实例化
 		if (!bd.hasMethodOverrides()) {
 			if (System.getSecurityManager() != null) {
-				// use own privileged to change accessibility (when security is on)
 				AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
 					ReflectionUtils.makeAccessible(ctor);
 					return null;
@@ -116,6 +134,10 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 			}
 			return BeanUtils.instantiateClass(ctor, args);
 		}
+		/**
+		 * 反之，则使用 cglib 反射实例化
+		 * @see Lookup
+		 */
 		else {
 			return instantiateWithMethodInjection(bd, beanName, owner, ctor, args);
 		}
@@ -133,6 +155,13 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 		throw new UnsupportedOperationException("Method Injection not supported in SimpleInstantiationStrategy");
 	}
 
+	/**
+	 * 使用 factoryMethod 实例化
+	 * @see AbstractAutowireCapableBeanFactory#createBeanInstance
+	 * @see AbstractAutowireCapableBeanFactory#instantiateUsingFactoryMethod
+	 * @see ConstructorResolver#instantiateUsingFactoryMethod
+	 * @see ConstructorResolver#instantiate(String, RootBeanDefinition, Object, Method, Object[])
+	 */
 	@Override
 	public Object instantiate(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner,
 			@Nullable Object factoryBean, final Method factoryMethod, Object... args) {
