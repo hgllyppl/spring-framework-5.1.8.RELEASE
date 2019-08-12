@@ -170,7 +170,7 @@ class ConstructorResolver {
 			}
 			// 排序构造方法
 			AutowireUtils.sortConstructors(candidates);
-			// 声明默认的参数权重、无法决定的构造方法列表、解析构造方法参数过程中的异常
+			// 声明最小参数权重、无法决定的构造方法列表、解析构造方法参数过程中的异常
 			int minTypeDiffWeight = Integer.MAX_VALUE;
 			Set<Constructor<?>> ambiguousConstructors = null;
 			LinkedList<UnsatisfiedDependencyException> causes = null;
@@ -220,9 +220,9 @@ class ConstructorResolver {
 					}
 					argsHolder = new ArgumentsHolder(explicitArgs);
 				}
-				// 读取参数的权重
+				// 读取参数权重
 				int typeDiffWeight = (mbd.isLenientConstructorResolution() ? argsHolder.getTypeDifferenceWeight(paramTypes) : argsHolder.getAssignabilityWeight(paramTypes));
-				// 如果参数权限小于默认的参数权重，则选中当前构造方法和其参数
+				// 如果当前参数权重 < 最小参数权重，则选中当前构造方法
 				if (typeDiffWeight < minTypeDiffWeight) {
 					constructorToUse = candidate;
 					argsHolderToUse = argsHolder;
@@ -230,8 +230,8 @@ class ConstructorResolver {
 					minTypeDiffWeight = typeDiffWeight;
 					ambiguousConstructors = null;
 				}
-				// 如果已选中构造方法且当前构造方法的参数等于默认的参数权重
-				// 则将其加入无法决定的构造方法列表
+				// 如果 已选中构造方法 且 当前构造方法参数权重 = 最小参数权重
+				// 则将当前构造方法和已选中构造方法加入无法决定的构造方法列表
 				else if (constructorToUse != null && typeDiffWeight == minTypeDiffWeight) {
 					if (ambiguousConstructors == null) {
 						ambiguousConstructors = new LinkedHashSet<>();
@@ -435,7 +435,7 @@ class ConstructorResolver {
 			//
 			ConstructorArgumentValues resolvedValues = null;
 			boolean autowiring = (mbd.getResolvedAutowireMode() == AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR);
-			// 声明参数权重、无法决定的方法列表、解析参数过程中的异常列表
+			// 声明最小参数权重、无法决定的方法列表、解析参数过程中的异常列表
 			int minTypeDiffWeight = Integer.MAX_VALUE;
 			Set<Method> ambiguousFactoryMethods = null;
 			LinkedList<UnsatisfiedDependencyException> causes = null;
@@ -496,9 +496,9 @@ class ConstructorResolver {
 							continue;
 						}
 					}
-					// 读取参数的权重
+					// 读取参数权重
 					int typeDiffWeight = mbd.isLenientConstructorResolution() ? argsHolder.getTypeDifferenceWeight(paramTypes) : argsHolder.getAssignabilityWeight(paramTypes);
-					// 如果参数权重小于默认的权重, 则选中当前方法
+					// 如果当前参数权重 < 最小参数权重, 则选中当前方法
 					if (typeDiffWeight < minTypeDiffWeight) {
 						factoryMethodToUse = candidate;
 						argsHolderToUse = argsHolder;
@@ -506,8 +506,9 @@ class ConstructorResolver {
 						minTypeDiffWeight = typeDiffWeight;
 						ambiguousFactoryMethods = null;
 					}
-					// 如果 已选中方法 且 参数权重等于默认权重 且 不容忍多方法
-					// 且 当前方法的参数与已选中方法的参数相同, 则将当前方法加入无法决定的方法列表
+					// 如果 已选中方法 且 当前参数权重 = 最小参数权重 且 不容忍多方法
+					// 且 当前方法参数个数 = 选中方法参数个数 且 当前方法参数 !eq 已选中方法参数
+					// 则将当前方法与选中方法加入无法决定的方法列表
 					else if (factoryMethodToUse != null
 							&& typeDiffWeight == minTypeDiffWeight
 							&& !mbd.isLenientConstructorResolution()

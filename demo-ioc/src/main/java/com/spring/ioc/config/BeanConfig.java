@@ -17,6 +17,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Scope;
 
@@ -39,6 +40,7 @@ public class BeanConfig extends BeanConfigSuperClass implements BeanConfigInterf
 
     //-------------------------作用域---------------------------------------
     @Bean
+    @Lazy
     @Scope(SCOPE_SINGLETON)
     public Student studentSingleton() {
         return new Student()
@@ -130,7 +132,7 @@ public class BeanConfig extends BeanConfigSuperClass implements BeanConfigInterf
     }
 
     //-------------------------lookup case---------------------------------------
-    @Lookup("studentSingleton")
+    @Lookup("studentPrototype")
     public Student getStudent() {
         return null;
     }

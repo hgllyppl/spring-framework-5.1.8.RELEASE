@@ -7,6 +7,7 @@ import com.spring.ioc.config.BeanConfig;
 import com.spring.ioc.config.DeferredImportSelectorConfig;
 import com.spring.ioc.config.ImportBeanDefConfig;
 import com.spring.ioc.config.ImportSelectorConfig;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
@@ -14,6 +15,7 @@ import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.ImportResource;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.context.support.AbstractApplicationContext;
 
 /**
  * Created by xin on 2019/4/22.
@@ -38,5 +40,12 @@ public class IocMain {
         BeanConfig beanConfig = ctx.getBean(BeanConfig.class);
         System.out.println(beanConfig.getStudent());
         System.out.println(beanConfig.getStudent());
+        /**
+         * 带 @Lazy 的 bean 和 普通 bean 并无什么大的不同
+         * 仅仅只是在 ApplicationContext.finishBeanFactoryInitialization 时没有完成初始化
+         * @see AbstractApplicationContext#finishBeanFactoryInitialization
+         * @see DefaultListableBeanFactory#preInstantiateSingletons
+         */
+        System.out.println(ctx.getBean("studentSingleton"));
     }
 }
