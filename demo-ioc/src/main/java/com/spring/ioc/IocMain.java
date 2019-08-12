@@ -31,7 +31,7 @@ public class IocMain {
     public static void main(String[] args) {
         ConfigurableApplicationContext ctx = new AnnotationConfigApplicationContext(IocMain.class);
         ctx.registerShutdownHook();
-        // TODO ? 获取 工厂bean
+        // 获取工厂bean
         ctx.getBean(StudentFactory.class);
         ctx.getBean("&studentFactory");
         // 获取 bean
