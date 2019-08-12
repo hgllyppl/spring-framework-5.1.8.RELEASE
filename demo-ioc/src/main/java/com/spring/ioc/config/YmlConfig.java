@@ -1,6 +1,7 @@
 package com.spring.ioc.config;
 
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
@@ -13,7 +14,7 @@ import org.springframework.core.io.ClassPathResource;
 public class YmlConfig {
 
     @Bean
-    public PropertySourcesPlaceholderConfigurer placeholderConfigurer() {
+    public PropertySourcesPlaceholderConfigurer placeholderConfigurer(ApplicationContext applicationContext) {
         YamlPropertiesFactoryBean ymlFactory = new YamlPropertiesFactoryBean();
         ymlFactory.setResources(new ClassPathResource("application.yml"));
         PropertySourcesPlaceholderConfigurer sources = new PropertySourcesPlaceholderConfigurer();
