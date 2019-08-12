@@ -9,10 +9,8 @@ import com.spring.ioc.bean.JavaxAnnoCase;
 import com.spring.ioc.bean.SpringAnnoCase;
 import com.spring.ioc.bean.Student;
 import com.spring.ioc.bean.StudentFactory;
-import com.spring.ioc.bean.ViewProperty;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Lookup;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,6 +21,7 @@ import org.springframework.context.annotation.Scope;
 
 import java.util.List;
 
+import static com.spring.ioc.bean.TestScope.TEST_SCOPE;
 import static org.springframework.beans.factory.config.ConfigurableBeanFactory.SCOPE_PROTOTYPE;
 import static org.springframework.beans.factory.config.ConfigurableBeanFactory.SCOPE_SINGLETON;
 
@@ -54,6 +53,14 @@ public class BeanConfig extends BeanConfigSuperClass implements BeanConfigInterf
         return new Student()
                 .setName("li4")
                 .setScope(SCOPE_PROTOTYPE);
+    }
+
+    @Bean
+    @Scope(TEST_SCOPE)
+    public Student studentTestScope() {
+        return new Student()
+                .setName("xiangxiang")
+                .setScope(TEST_SCOPE);
     }
 
     //-------------------------工厂bean---------------------------------------
@@ -109,11 +116,6 @@ public class BeanConfig extends BeanConfigSuperClass implements BeanConfigInterf
     }
 
     @Bean
-    public ViewProperty viewProperty2() {
-        return new ViewProperty();
-    }
-
-    @Bean
     public String[] injectArray() {
         return new String[] {"1"};
     }
@@ -121,14 +123,6 @@ public class BeanConfig extends BeanConfigSuperClass implements BeanConfigInterf
     @Bean @Primary
     public List<String> injectList() {
         return Lists.newArrayList("1");
-    }
-
-    //-------------------------TODO---------------------------------------
-    @Bean
-    public Student studentForArgs(@Value("${student.id}") String studentId,
-                                  @Value("${student.name}")String studentName,
-                                  @Value("${student.scope}")String studentScope) {
-        return new Student(studentId, studentName, studentScope);
     }
 
     //-------------------------lookup case---------------------------------------
