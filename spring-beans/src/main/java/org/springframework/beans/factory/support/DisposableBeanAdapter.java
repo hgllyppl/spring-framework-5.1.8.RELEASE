@@ -219,7 +219,8 @@ class DisposableBeanAdapter implements DisposableBean, Runnable, Serializable {
 	public void destroy() {
 		/**
 		 * 销毁 bean 前的处理
-		 * TODO 生命周期7 postProcessBeforeDestruction
+		 * TODO 生命周期9 postProcessBeforeDestruction
+		 * TODO 生命周期10 destroy
 		 * @see ApplicationListenerDetector
 		 * @see InitDestroyAnnotationBeanPostProcessor
 		 */

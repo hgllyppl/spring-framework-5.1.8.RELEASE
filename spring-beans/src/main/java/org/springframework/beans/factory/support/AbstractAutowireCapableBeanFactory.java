@@ -16,30 +16,8 @@
 
 package org.springframework.beans.factory.support;
 
-import java.beans.PropertyDescriptor;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.function.Supplier;
-
+import com.sun.xml.internal.bind.v2.TODO;
 import org.apache.commons.logging.Log;
-
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
@@ -60,7 +38,6 @@ import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.InjectionPoint;
-import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.UnsatisfiedDependencyException;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -84,6 +61,28 @@ import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
+
+import java.beans.PropertyDescriptor;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Supplier;
 
 import static org.springframework.beans.factory.support.AutowireUtils.resolveReturnTypeForFactoryMethod;
 
@@ -529,6 +528,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 		// 实例化
 		if (instanceWrapper == null) {
+			/**
+			 * TODO 生命周期2 createBeanInstance
+			 */
 			instanceWrapper = createBeanInstance(beanName, mbd, args);
 		}
 		// 获取实例及其类型
@@ -538,7 +540,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			mbd.resolvedTargetType = beanType;
 		}
 		/**
-		 * TODO 生命周期2 postProcessMergedBeanDefinition
+		 * TODO 生命周期3 postProcessMergedBeanDefinition
 		 * 用于提前记录 bean 的name、field、method 等信息, 以便进行
 		 * @see ApplicationListenerDetector
 		 * @see AutowiredAnnotationBeanPostProcessor
@@ -922,7 +924,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				/**
 				 * 使用 SmartInstantiationAwareBeanPostProcessor 处理 bean
 				 * 此 BeanPostProcessor 用于处理代理行为的循环引用
-				 * @see AbstractAutoProxyCreator
+				 * @see org.springframework.aop.framework.autoproxy.AbstractAutoProxyCreator
 				 */
 				if (bp instanceof SmartInstantiationAwareBeanPostProcessor) {
 					SmartInstantiationAwareBeanPostProcessor ibp = (SmartInstantiationAwareBeanPostProcessor) bp;
@@ -1286,8 +1288,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 	/**
 	 * 为 bean 注入属性
-	 * // TODO 生命周期3 postProcessAfterInstantiation
-	 * // TODO 生命周期4 postProcessProperties
+	 * TODO 生命周期4 postProcessAfterInstantiation
+	 * TODO 生命周期5 postProcessProperties
 	 */
 	@SuppressWarnings("deprecation")  // for postProcessPropertyValues
 	protected void populateBean(String beanName, RootBeanDefinition mbd, @Nullable BeanWrapper bw) {
@@ -1679,8 +1681,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 	/**
 	 * 在 bean 属性注入之后, 初始化 bean
-	 * TODO 生命周期5 postProcessBeforeInitialization
-	 * TODO 生命周期6 postProcessAfterInitialization
+	 * TODO 生命周期6 postProcessBeforeInitialization
+	 * TODO 生命周期7 invokeAwareMethods
+	 * TODO 生命周期8 postProcessAfterInitialization
 	 * @see #invokeInitMethods
 	 * @see #applyBeanPostProcessorsBeforeInitialization
 	 * @see #applyBeanPostProcessorsAfterInitialization
