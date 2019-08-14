@@ -1,3 +1,4 @@
+include 'demo-aop'
 include 'demo-ioc'
 include "spring-aop"
 include "spring-aspects"

@@ -1,0 +1,10 @@
+
+dependencies {
+    compile(project(":spring-context"))
+    compile(project(":spring-aop"))
+    compile("ch.qos.logback:logback-classic:1.2.3")
+    compile("org.slf4j:jcl-over-slf4j:1.7.26")
+    compile("org.aspectj:aspectjweaver:1.9.4")
+//    compile("com.google.guava:guava:22.0")
+//    compile("com.alibaba:fastjson:1.2.47")
+}

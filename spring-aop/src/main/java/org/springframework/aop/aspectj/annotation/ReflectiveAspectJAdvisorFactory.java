@@ -16,14 +16,6 @@
 
 package org.springframework.aop.aspectj.annotation;
 
-import java.io.Serializable;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-
 import org.aopalliance.aop.Advice;
 import org.aspectj.lang.annotation.After;
 import org.aspectj.lang.annotation.AfterReturning;
@@ -32,7 +24,6 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.annotation.DeclareParents;
 import org.aspectj.lang.annotation.Pointcut;
-
 import org.springframework.aop.Advisor;
 import org.springframework.aop.MethodBeforeAdvice;
 import org.springframework.aop.aspectj.AbstractAspectJAdvice;
@@ -54,6 +45,14 @@ import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.util.comparator.InstanceComparator;
 
+import java.io.Serializable;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
 /**
  * Factory that can create Spring AOP Advisors given AspectJ classes from
  * classes honoring the AspectJ 5 annotation syntax, using reflection to
@@ -72,14 +71,12 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 	private static final Comparator<Method> METHOD_COMPARATOR;
 
 	static {
-		Comparator<Method> adviceKindComparator = new ConvertingComparator<>(
-				new InstanceComparator<>(
-						Around.class, Before.class, After.class, AfterReturning.class, AfterThrowing.class),
-				(Converter<Method, Annotation>) method -> {
-					AspectJAnnotation<?> annotation =
-						AbstractAspectJAdvisorFactory.findAspectJAnnotationOnMethod(method);
-					return (annotation != null ? annotation.getAnnotation() : null);
-				});
+		Comparator<Annotation> instanceComparator = new InstanceComparator<>(Around.class, Before.class, After.class, AfterReturning.class, AfterThrowing.class);
+		Converter<Method, Annotation> converter = method -> {
+            AspectJAnnotation<?> annotation = findAspectJAnnotationOnMethod(method);
+            return annotation != null ? annotation.getAnnotation() : null;
+        };
+		Comparator<Method> adviceKindComparator = new ConvertingComparator<>(instanceComparator, converter);
 		Comparator<Method> methodNameComparator = new ConvertingComparator<>(Method::getName);
 		METHOD_COMPARATOR = adviceKindComparator.thenComparing(methodNameComparator);
 	}
