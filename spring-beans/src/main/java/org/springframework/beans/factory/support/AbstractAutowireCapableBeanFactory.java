@@ -588,7 +588,11 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}
 		}
 		if (earlySingletonExposure) {
+			// eg. 代理行为的循环引用
+			// eg. circularRefA -> circularRefB -> circularRefA
 			Object earlySingletonReference = getSingleton(beanName, false);
+			// circularRefA 在注入 circularRefB 后, 将获取到被 circularRefB 触发的 earlySingletonReferenceA
+			// 因此 exposedObject 将被赋值成 earlySingletonReferenceA
 			if (earlySingletonReference != null) {
 				if (exposedObject == bean) {
 					exposedObject = earlySingletonReference;
@@ -1370,7 +1374,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}
 			checkDependencies(beanName, mbd, filteredPds, pvs);
 		}
-		// ???
+		// 迭代 beanDef.getPropertyValues, 将 PropertyValue 通过 setter 方法注入 bean
 		if (pvs != null) {
 			applyPropertyValues(beanName, mbd, bw, pvs);
 		}
