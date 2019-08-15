@@ -10,17 +10,12 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
  * Created by xin on 2019/4/22.
  */
 @ComponentScan
-@EnableAspectJAutoProxy
+@EnableAspectJAutoProxy(proxyTargetClass = true)
 public class AopMain {
 
-    // TODO 如何确定代理类型
-    // TODO 如何完成代理
-
-    // TODO 动/静态切点
-    // TODO 如何实例化(反射、objenesis)
-
+    // TODO 切面初始化
+    // TODO 构建代理 - 如何决定代理类型
     // TODO 循环依赖
-    // TODO SmartInstantiationAwareBeanPostProcessor
     public static void main(String[] args) {
         ApplicationContext ctx = new AnnotationConfigApplicationContext(AopMain.class);
         Student student = ctx.getBean(Student.class);
