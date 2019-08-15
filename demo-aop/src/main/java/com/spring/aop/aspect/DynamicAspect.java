@@ -9,7 +9,6 @@ import org.aspectj.lang.annotation.Pointcut;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Component;
 
 import static com.spring.aop.aspect.StaticAspect.AFTER;
 import static com.spring.aop.aspect.StaticAspect.AROUND;
@@ -20,7 +19,7 @@ import static com.spring.aop.aspect.StaticAspect.TPL;
  * Created by xin on 2019/4/28.
  */
 @Aspect
-@Component
+//@Component
 @Order(1)
 public class DynamicAspect {
 

@@ -1,7 +1,6 @@
 package com.spring.aop.bean;
 
 import com.spring.aop.aspect.DynamicAnn;
-import com.spring.aop.aspect.DynamicAspect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -12,7 +11,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class Student {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DynamicAspect.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Student.class);
 
     @DynamicAnn
     public void sayHello() {

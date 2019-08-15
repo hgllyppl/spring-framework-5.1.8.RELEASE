@@ -2,6 +2,7 @@ package com.spring.aop.aspect;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.After;
+import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Component;
  */
 @Aspect
 @Component
+//@Scope(ConfigurableListableBeanFactory.SCOPE_PROTOTYPE)
 @Order(0)
 public class StaticAspect {
 
@@ -24,6 +26,7 @@ public class StaticAspect {
     public static final String TPL = "{}.{}";
     public static final String BEFORE = "before";
     public static final String AFTER = "after";
+    public static final String AFTER_RETURNING = "afterReturning";
     public static final String AROUND = "around";
 
     @Pointcut("execution(public * com.spring.aop.bean.*.*(..))")
@@ -38,6 +41,11 @@ public class StaticAspect {
     @After("staticPointcut()")
     public void after() {
         LOGGER.info(TPL, StaticAspect.class.getSimpleName(), AFTER);
+    }
+
+    @AfterReturning("staticPointcut()")
+    public void afterReturning() {
+        LOGGER.info(TPL, StaticAspect.class.getSimpleName(), AFTER_RETURNING);
     }
 
     @Around("staticPointcut()")
