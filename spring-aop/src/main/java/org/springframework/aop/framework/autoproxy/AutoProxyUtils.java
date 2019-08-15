@@ -23,6 +23,8 @@ import org.springframework.core.Conventions;
 import org.springframework.lang.Nullable;
 import org.springframework.util.StringUtils;
 
+import static org.springframework.beans.factory.config.AutowireCapableBeanFactory.ORIGINAL_INSTANCE_SUFFIX;
+
 /**
  * Utilities for auto-proxy aware components.
  * Mainly for internal use within the framework.
@@ -126,12 +128,11 @@ public abstract class AutoProxyUtils {
 	 * @see AutowireCapableBeanFactory#ORIGINAL_INSTANCE_SUFFIX
 	 */
 	static boolean isOriginalInstance(String beanName, Class<?> beanClass) {
-		if (!StringUtils.hasLength(beanName) || beanName.length() !=
-				beanClass.getName().length() + AutowireCapableBeanFactory.ORIGINAL_INSTANCE_SUFFIX.length()) {
+		if (!StringUtils.hasLength(beanName)
+				|| beanName.length() != beanClass.getName().length() + ORIGINAL_INSTANCE_SUFFIX.length()) {
 			return false;
 		}
-		return (beanName.startsWith(beanClass.getName()) &&
-				beanName.endsWith(AutowireCapableBeanFactory.ORIGINAL_INSTANCE_SUFFIX));
+		return beanName.startsWith(beanClass.getName())
+				&& beanName.endsWith(ORIGINAL_INSTANCE_SUFFIX);
 	}
-
 }

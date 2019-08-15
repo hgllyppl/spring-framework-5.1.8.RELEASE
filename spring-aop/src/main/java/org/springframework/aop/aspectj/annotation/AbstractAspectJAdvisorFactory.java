@@ -16,15 +16,6 @@
 
 package org.springframework.aop.aspectj.annotation;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.StringTokenizer;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.aspectj.lang.annotation.After;
@@ -37,11 +28,19 @@ import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.AjType;
 import org.aspectj.lang.reflect.AjTypeSystem;
 import org.aspectj.lang.reflect.PerClauseKind;
-
 import org.springframework.aop.framework.AopConfigException;
 import org.springframework.core.ParameterNameDiscoverer;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.lang.Nullable;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.StringTokenizer;
 
 /**
  * Abstract base class for factories that can create Spring AOP Advisors
@@ -77,11 +76,11 @@ public abstract class AbstractAspectJAdvisorFactory implements AspectJAdvisorFac
 	 */
 	@Override
 	public boolean isAspect(Class<?> clazz) {
-		return (hasAspectAnnotation(clazz) && !compiledByAjc(clazz));
+		return hasAspectAnnotation(clazz) && !compiledByAjc(clazz);
 	}
 
 	private boolean hasAspectAnnotation(Class<?> clazz) {
-		return (AnnotationUtils.findAnnotation(clazz, Aspect.class) != null);
+		return AnnotationUtils.findAnnotation(clazz, Aspect.class) != null;
 	}
 
 	/**
