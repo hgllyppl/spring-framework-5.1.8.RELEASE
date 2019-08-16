@@ -23,6 +23,7 @@ import org.springframework.aop.Advisor;
 import org.springframework.aop.Pointcut;
 import org.springframework.aop.TargetSource;
 import org.springframework.aop.framework.AopInfrastructureBean;
+import org.springframework.aop.framework.DefaultAdvisorChainFactory;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.aop.framework.ProxyProcessorSupport;
 import org.springframework.aop.framework.adapter.AdvisorAdapterRegistry;
@@ -94,10 +95,6 @@ import static org.springframework.beans.factory.BeanFactory.FACTORY_BEAN_PREFIX;
 public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		implements SmartInstantiationAwareBeanPostProcessor, BeanFactoryAware {
 
-	/**
-	 * Convenience constant for subclasses: Return value for "do not proxy".
-	 * @see #getAdvicesAndAdvisorsForBean
-	 */
 	@Nullable
 	protected static final Object[] DO_NOT_PROXY = null;
 
@@ -108,11 +105,12 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	 */
 	protected static final Object[] PROXY_WITHOUT_ADDITIONAL_INTERCEPTORS = new Object[0];
 
-
-	/** Logger available to subclasses. */
 	protected final Log logger = LogFactory.getLog(getClass());
 
-	/** Default is global AdvisorAdapterRegistry. */
+	/**
+	 * 用于适配 advice
+	 * @see DefaultAdvisorChainFactory#getInterceptorsAndDynamicInterceptionAdvice
+	 */
 	private AdvisorAdapterRegistry advisorAdapterRegistry = GlobalAdvisorAdapterRegistry.getInstance();
 
 	/**
@@ -121,23 +119,26 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	 */
 	private boolean freezeProxy = false;
 
-	/** Default is no common interceptors. */
+	// 默认 interceptor
 	private String[] interceptorNames = new String[0];
-
+	// 优先应用默认 interceptor
 	private boolean applyCommonInterceptorsFirst = true;
-
+	// 自定义 TargetSourceCreator
 	@Nullable
 	private TargetSourceCreator[] customTargetSourceCreators;
 
 	@Nullable
 	private BeanFactory beanFactory;
-
+	// 自定义 targetSourcedBeanName 集合
 	private final Set<String> targetSourcedBeans = Collections.newSetFromMap(new ConcurrentHashMap<>(16));
-
+	// 记录被提前代理的 bean
+	// beanName/beanClass -> bean
 	private final Map<Object, Object> earlyProxyReferences = new ConcurrentHashMap<>(16);
-
+	// 所有被代理的class集合
+	// beanName/beanClass -> proxyBeanClass
 	private final Map<Object, Class<?>> proxyTypes = new ConcurrentHashMap<>(16);
-
+	// 记录 bean 是否被代理
+	// beanName/beanClass -> boolean
 	private final Map<Object, Boolean> advisedBeans = new ConcurrentHashMap<>(256);
 
 
@@ -203,21 +204,19 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		this.applyCommonInterceptorsFirst = applyCommonInterceptorsFirst;
 	}
 
+	// 注入 beanFactory
 	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
 		this.beanFactory = beanFactory;
 	}
 
-	/**
-	 * Return the owning {@link BeanFactory}.
-	 * May be {@code null}, as this post-processor doesn't need to belong to a bean factory.
-	 */
 	@Nullable
 	protected BeanFactory getBeanFactory() {
 		return this.beanFactory;
 	}
 
-
+	// 预测 bean 的类型
+	// 返回代理类型或返回 null
 	@Override
 	@Nullable
 	public Class<?> predictBeanType(Class<?> beanClass, String beanName) {
@@ -234,6 +233,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		return null;
 	}
 
+	// 提前获取 bean, 用于解决循环引用
 	@Override
 	public Object getEarlyBeanReference(Object bean, String beanName) {
 		Object cacheKey = getCacheKey(bean.getClass(), beanName);
@@ -241,20 +241,23 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		return wrapIfNecessary(bean, beanName, cacheKey);
 	}
 
+	// 判断一个 bean 是否需要被代理
+	// 如果有 TargetSourceCreator, 则构建 TargetSource 并完成代理
 	@Override
 	public Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) {
 		Object cacheKey = getCacheKey(beanClass, beanName);
-
+		// 如果 beanName 为空 或 非自定义 targetSourceBean
 		if (!StringUtils.hasLength(beanName) || !this.targetSourcedBeans.contains(beanName)) {
 			if (this.advisedBeans.containsKey(cacheKey)) {
 				return null;
 			}
+			// 如果 beanClass 是 aop 相关类或不需要代理
+			// 则将 beanClass -> false 加入 advisedBeans
 			if (isInfrastructureClass(beanClass) || shouldSkip(beanClass, beanName)) {
 				this.advisedBeans.put(cacheKey, Boolean.FALSE);
 				return null;
 			}
 		}
-
 		// Create proxy here if we have a custom TargetSource.
 		// Suppresses unnecessary default instantiation of the target bean:
 		// The TargetSource will handle target instances in a custom fashion.
@@ -268,7 +271,6 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 			this.proxyTypes.put(cacheKey, proxy.getClass());
 			return proxy;
 		}
-
 		return null;
 	}
 
@@ -288,9 +290,8 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	}
 
 	/**
-	 * Create a proxy with the configured interceptors if the bean is
-	 * identified as one to proxy by the subclass.
-	 * @see #getAdvicesAndAdvisorsForBean
+	 * 如果 bean 需要被代理, 则对其进行代理
+	 * @see #getEarlyBeanReference
 	 */
 	@Override
 	public Object postProcessAfterInitialization(@Nullable Object bean, String beanName) {
@@ -303,17 +304,8 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		return bean;
 	}
 
-
 	/**
-	 * Build a cache key for the given bean class and bean name.
-	 * <p>Note: As of 4.2.3, this implementation does not return a concatenated
-	 * class/name String anymore but rather the most efficient cache key possible:
-	 * a plain bean name, prepended with {@link BeanFactory#FACTORY_BEAN_PREFIX}
-	 * in case of a {@code FactoryBean}; or if no bean name specified, then the
-	 * given bean {@code Class} as-is.
-	 * @param beanClass the bean class
-	 * @param beanName the bean name
-	 * @return the cache key for the given class and name
+	 * return beanName/beanClass
 	 */
 	protected Object getCacheKey(Class<?> beanClass, @Nullable String beanName) {
 		if (StringUtils.hasLength(beanName)) {
@@ -325,48 +317,40 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	}
 
 	/**
-	 * Wrap the given bean if necessary, i.e. if it is eligible for being proxied.
-	 * @param bean the raw bean instance
-	 * @param beanName the name of the bean
-	 * @param cacheKey the cache key for metadata access
-	 * @return a proxy wrapping the bean, or the raw bean instance as-is
+	 * 代理 bean 如果需要
 	 */
 	protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
+		// 如果 beanName 非空 且属于 targetSourcedBeans, 则直接返回
 		if (StringUtils.hasLength(beanName) && this.targetSourcedBeans.contains(beanName)) {
 			return bean;
 		}
+		// 如果 bean 不需要代理, 则直接返回
 		if (Boolean.FALSE.equals(this.advisedBeans.get(cacheKey))) {
 			return bean;
 		}
+		// 如果 bean 是 aop 相关类 或 不需要代理, 则直接返回
 		if (isInfrastructureClass(bean.getClass()) || shouldSkip(bean.getClass(), beanName)) {
 			this.advisedBeans.put(cacheKey, Boolean.FALSE);
 			return bean;
 		}
-
-		// Create proxy if we have advice.
+		// 获取拦截器(切面)
+		// TODO
 		Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, null);
+		// 构建代理并返回
 		if (specificInterceptors != DO_NOT_PROXY) {
 			this.advisedBeans.put(cacheKey, Boolean.TRUE);
+			// TODO
 			Object proxy = createProxy(bean.getClass(), beanName, specificInterceptors, new SingletonTargetSource(bean));
 			this.proxyTypes.put(cacheKey, proxy.getClass());
 			return proxy;
 		}
-
+		// 无需代理, 直接返回
 		this.advisedBeans.put(cacheKey, Boolean.FALSE);
 		return bean;
 	}
 
 	/**
-	 * Return whether the given bean class represents an infrastructure class
-	 * that should never be proxied.
-	 * <p>The default implementation considers Advices, Advisors and
-	 * AopInfrastructureBeans as infrastructure classes.
-	 * @param beanClass the class of the bean
-	 * @return whether the bean represents an infrastructure class
-	 * @see org.aopalliance.aop.Advice
-	 * @see org.springframework.aop.Advisor
-	 * @see org.springframework.aop.framework.AopInfrastructureBean
-	 * @see #shouldSkip
+	 * 判断 beanClass 是否是 aop 相关类
 	 */
 	protected boolean isInfrastructureClass(Class<?> beanClass) {
 		boolean retVal = Advice.class.isAssignableFrom(beanClass)
@@ -380,16 +364,9 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	}
 
 	/**
-	 * Subclasses should override this method to return {@code true} if the
-	 * given bean should not be considered for auto-proxying by this post-processor.
-	 * <p>Sometimes we need to be able to avoid this happening, e.g. if it will lead to
-	 * a circular reference or if the existing target instance needs to be preserved.
-	 * This implementation returns {@code false} unless the bean name indicates an
-	 * "original instance" according to {@code AutowireCapableBeanFactory} conventions.
-	 * @param beanClass the class of the bean
-	 * @param beanName the name of the bean
-	 * @return whether to skip the given bean
-	 * @see org.springframework.beans.factory.config.AutowireCapableBeanFactory#ORIGINAL_INSTANCE_SUFFIX
+	 * 是否不需要代理 bean, 子类可以覆盖这个方法来完成决断
+	 * 如果 beanName 是 original instance, 则认为不需要代理
+	 * @like-this org.springframework.aop.framework.autoproxy.AutoProxyUtils.original
 	 */
 	protected boolean shouldSkip(Class<?> beanClass, String beanName) {
 		return AutoProxyUtils.isOriginalInstance(beanName, beanClass);

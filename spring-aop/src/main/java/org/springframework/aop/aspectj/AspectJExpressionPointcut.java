@@ -16,16 +16,6 @@
 
 package org.springframework.aop.aspectj;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.aopalliance.intercept.MethodInvocation;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,7 +32,6 @@ import org.aspectj.weaver.tools.PointcutParameter;
 import org.aspectj.weaver.tools.PointcutParser;
 import org.aspectj.weaver.tools.PointcutPrimitive;
 import org.aspectj.weaver.tools.ShadowMatch;
-
 import org.springframework.aop.ClassFilter;
 import org.springframework.aop.IntroductionAwareMethodMatcher;
 import org.springframework.aop.MethodMatcher;
@@ -62,6 +51,16 @@ import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Spring {@link org.springframework.aop.Pointcut} implementation
@@ -100,40 +99,30 @@ public class AspectJExpressionPointcut extends AbstractExpressionPointcut
 		SUPPORTED_PRIMITIVES.add(PointcutPrimitive.AT_TARGET);
 	}
 
-
 	private static final Log logger = LogFactory.getLog(AspectJExpressionPointcut.class);
 
+	// 声明切点的 class
 	@Nullable
 	private Class<?> pointcutDeclarationScope;
-
+	// 切点参数名称
 	private String[] pointcutParameterNames = new String[0];
-
+	// 切点参数类型
 	private Class<?>[] pointcutParameterTypes = new Class<?>[0];
-
+	// beanFactory
 	@Nullable
 	private BeanFactory beanFactory;
-
+	// pointcutClassLoader
 	@Nullable
 	private transient ClassLoader pointcutClassLoader;
-
+	// 切点表达式
 	@Nullable
 	private transient PointcutExpression pointcutExpression;
 
 	private transient Map<Method, ShadowMatch> shadowMatchCache = new ConcurrentHashMap<>(32);
 
-
-	/**
-	 * Create a new default AspectJExpressionPointcut.
-	 */
 	public AspectJExpressionPointcut() {
 	}
 
-	/**
-	 * Create a new AspectJExpressionPointcut with the given settings.
-	 * @param declarationScope the declaration scope for the pointcut
-	 * @param paramNames the parameter names for the pointcut
-	 * @param paramTypes the parameter types for the pointcut
-	 */
 	public AspectJExpressionPointcut(Class<?> declarationScope, String[] paramNames, Class<?>[] paramTypes) {
 		this.pointcutDeclarationScope = declarationScope;
 		if (paramNames.length != paramTypes.length) {
@@ -143,7 +132,6 @@ public class AspectJExpressionPointcut extends AbstractExpressionPointcut
 		this.pointcutParameterNames = paramNames;
 		this.pointcutParameterTypes = paramTypes;
 	}
-
 
 	/**
 	 * Set the declaration scope for the pointcut.
@@ -171,7 +159,6 @@ public class AspectJExpressionPointcut extends AbstractExpressionPointcut
 		this.beanFactory = beanFactory;
 	}
 
-
 	@Override
 	public ClassFilter getClassFilter() {
 		obtainPointcutExpression();
@@ -184,15 +171,14 @@ public class AspectJExpressionPointcut extends AbstractExpressionPointcut
 		return this;
 	}
 
-
 	/**
-	 * Check whether this pointcut is ready to match,
-	 * lazily building the underlying AspectJ pointcut expression.
+	 * 延迟加载 pointcutExpression
 	 */
 	private PointcutExpression obtainPointcutExpression() {
 		if (getExpression() == null) {
 			throw new IllegalStateException("Must set property 'expression' before attempting to match");
 		}
+		// 初始化 pointcutExpression
 		if (this.pointcutExpression == null) {
 			this.pointcutClassLoader = determinePointcutClassLoader();
 			this.pointcutExpression = buildPointcutExpression(this.pointcutClassLoader);
@@ -200,9 +186,6 @@ public class AspectJExpressionPointcut extends AbstractExpressionPointcut
 		return this.pointcutExpression;
 	}
 
-	/**
-	 * Determine the ClassLoader to use for pointcut evaluation.
-	 */
 	@Nullable
 	private ClassLoader determinePointcutClassLoader() {
 		if (this.beanFactory instanceof ConfigurableBeanFactory) {
@@ -221,11 +204,9 @@ public class AspectJExpressionPointcut extends AbstractExpressionPointcut
 		PointcutParser parser = initializePointcutParser(classLoader);
 		PointcutParameter[] pointcutParameters = new PointcutParameter[this.pointcutParameterNames.length];
 		for (int i = 0; i < pointcutParameters.length; i++) {
-			pointcutParameters[i] = parser.createPointcutParameter(
-					this.pointcutParameterNames[i], this.pointcutParameterTypes[i]);
+			pointcutParameters[i] = parser.createPointcutParameter(this.pointcutParameterNames[i], this.pointcutParameterTypes[i]);
 		}
-		return parser.parsePointcutExpression(replaceBooleanOperators(resolveExpression()),
-				this.pointcutDeclarationScope, pointcutParameters);
+		return parser.parsePointcutExpression(replaceBooleanOperators(resolveExpression()), this.pointcutDeclarationScope, pointcutParameters);
 	}
 
 	private String resolveExpression() {

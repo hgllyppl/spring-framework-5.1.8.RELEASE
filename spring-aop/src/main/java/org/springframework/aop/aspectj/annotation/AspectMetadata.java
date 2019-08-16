@@ -16,20 +16,19 @@
 
 package org.springframework.aop.aspectj.annotation;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.Serializable;
-
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.AjType;
 import org.aspectj.lang.reflect.AjTypeSystem;
 import org.aspectj.lang.reflect.PerClauseKind;
-
 import org.springframework.aop.Pointcut;
 import org.springframework.aop.aspectj.AspectJExpressionPointcut;
 import org.springframework.aop.aspectj.TypePatternClassFilter;
 import org.springframework.aop.framework.AopConfigException;
 import org.springframework.aop.support.ComposablePointcut;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.Serializable;
 
 /**
  * Metadata for an AspectJ aspect class, with an additional Spring AOP pointcut
@@ -79,27 +78,31 @@ public class AspectMetadata implements Serializable {
 	 * @param aspectName the name of the aspect
 	 */
 	public AspectMetadata(Class<?> aspectClass, String aspectName) {
+		// 赋值 aspectName
 		this.aspectName = aspectName;
-
 		Class<?> currClass = aspectClass;
 		AjType<?> ajType = null;
+		// 构建 ajType
 		while (currClass != Object.class) {
 			AjType<?> ajTypeToCheck = AjTypeSystem.getAjType(currClass);
+			// check for @aspect
 			if (ajTypeToCheck.isAspect()) {
 				ajType = ajTypeToCheck;
 				break;
 			}
 			currClass = currClass.getSuperclass();
 		}
+		// 如果 ajType 为 null 或者有 DeclarePrecendence, 则抛出异常
 		if (ajType == null) {
 			throw new IllegalArgumentException("Class '" + aspectClass.getName() + "' is not an @AspectJ aspect");
 		}
 		if (ajType.getDeclarePrecedence().length > 0) {
 			throw new IllegalArgumentException("DeclarePrecendence not presently supported in Spring AOP");
 		}
+		// 赋值 aspectClass、ajType
 		this.aspectClass = ajType.getJavaClass();
 		this.ajType = ajType;
-
+		// 赋值 perClausePointcut
 		switch (this.ajType.getPerClause().getKind()) {
 			case SINGLETON:
 				this.perClausePointcut = Pointcut.TRUE;
@@ -179,16 +182,14 @@ public class AspectMetadata implements Serializable {
 	}
 
 	/**
-	 * Return whether the aspect needs to be lazily instantiated.
+	 * PERTARGET、PERTHIS、PERTYPEWITHIN 类型的则为延迟初始化
 	 */
 	public boolean isLazilyInstantiated() {
 		return (isPerThisOrPerTarget() || isPerTypeWithin());
 	}
 
-
 	private void readObject(ObjectInputStream inputStream) throws IOException, ClassNotFoundException {
 		inputStream.defaultReadObject();
 		this.ajType = AjTypeSystem.getAjType(this.aspectClass);
 	}
-
 }

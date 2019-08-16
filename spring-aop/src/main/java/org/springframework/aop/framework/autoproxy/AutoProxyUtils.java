@@ -16,7 +16,6 @@
 
 package org.springframework.aop.framework.autoproxy;
 
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.core.Conventions;
@@ -119,20 +118,14 @@ public abstract class AutoProxyUtils {
 	}
 
 	/**
-	 * Determine whether the given bean name indicates an "original instance"
-	 * according to {@link AutowireCapableBeanFactory#ORIGINAL_INSTANCE_SUFFIX},
-	 * skipping any proxy attempts for it.
-	 * @param beanName the name of the bean
-	 * @param beanClass the corresponding bean class
-	 * @since 5.1
-	 * @see AutowireCapableBeanFactory#ORIGINAL_INSTANCE_SUFFIX
+	 * 判断 beanName 是否是 original instance
+	 * @like-this org.springframework.aop.framework.autoproxy.AutoProxyUtils.original
 	 */
 	static boolean isOriginalInstance(String beanName, Class<?> beanClass) {
-		if (!StringUtils.hasLength(beanName)
-				|| beanName.length() != beanClass.getName().length() + ORIGINAL_INSTANCE_SUFFIX.length()) {
+		int originalLen = beanClass.getName().length() + ORIGINAL_INSTANCE_SUFFIX.length();
+		if (!StringUtils.hasLength(beanName) || beanName.length() != originalLen) {
 			return false;
 		}
-		return beanName.startsWith(beanClass.getName())
-				&& beanName.endsWith(ORIGINAL_INSTANCE_SUFFIX);
+		return beanName.startsWith(beanClass.getName()) && beanName.endsWith(ORIGINAL_INSTANCE_SUFFIX);
 	}
 }

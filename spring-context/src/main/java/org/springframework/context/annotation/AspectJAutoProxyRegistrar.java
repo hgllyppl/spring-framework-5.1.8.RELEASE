@@ -17,6 +17,7 @@
 package org.springframework.context.annotation;
 
 import org.springframework.aop.config.AopConfigUtils;
+import org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.core.type.AnnotationMetadata;
@@ -36,13 +37,17 @@ import static org.springframework.context.annotation.AnnotationConfigUtils.attri
 class AspectJAutoProxyRegistrar implements ImportBeanDefinitionRegistrar {
 
 	/**
-	 * Register, escalate, and configure the AspectJ auto proxy creator based on the value
-	 * of the @{@link EnableAspectJAutoProxy#proxyTargetClass()} attribute on the importing
-	 * {@code @Configuration} class.
+	 * 注册自动代理配置
 	 */
 	@Override
 	public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+		// 注册自动代理 beanDef
 		AopConfigUtils.registerAspectJAnnotationAutoProxyCreatorIfNecessary(registry);
+		/**
+		 * 查找 @EnableAspectJAutoProxy 并设置 exposeProxy、proxyTargetClass 属性
+		 * 这两个属性将在 bean 被实例化后注入进去
+		 * @see AbstractAutowireCapableBeanFactory#populateBean -> applyPropertyValues
+		 */
 		AnnotationAttributes enableAspectJAutoProxy = attributesFor(importingClassMetadata, EnableAspectJAutoProxy.class);
 		if (enableAspectJAutoProxy != null) {
 			if (enableAspectJAutoProxy.getBoolean("proxyTargetClass")) {

@@ -49,15 +49,21 @@ import java.util.regex.Pattern;
 @SuppressWarnings("serial")
 public class AnnotationAwareAspectJAutoProxyCreator extends AspectJAwareAdvisorAutoProxyCreator {
 
+	// 构建所有 advisor 时, 用于判断 aspect bean 是否符合给定格式
 	@Nullable
 	private List<Pattern> includePatterns;
-
+	/**
+	 * 用于对给定的 aspect-bean-class 生成 advisor
+	 * {@link ReflectiveAspectJAdvisorFactory}
+	 */
 	@Nullable
 	private AspectJAdvisorFactory aspectJAdvisorFactory;
-
+	/**
+	 * 用于扫描所有带 @Aspect 的bean, 并生成所有的 advisor
+	 * {@link BeanFactoryAspectJAdvisorsBuilder}
+	 */
 	@Nullable
 	private BeanFactoryAspectJAdvisorsBuilder aspectJAdvisorsBuilder;
-
 
 	/**
 	 * Set a list of regex patterns, matching eligible @AspectJ bean names.
@@ -75,27 +81,36 @@ public class AnnotationAwareAspectJAutoProxyCreator extends AspectJAwareAdvisorA
 		this.aspectJAdvisorFactory = aspectJAdvisorFactory;
 	}
 
+	// 初始化操作
 	@Override
 	protected void initBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+		// 超类初始化
 		super.initBeanFactory(beanFactory);
+		// 初始化 AdvisorFactory、AdvisorsBuilder
 		if (this.aspectJAdvisorFactory == null) {
 			this.aspectJAdvisorFactory = new ReflectiveAspectJAdvisorFactory(beanFactory);
 		}
 		this.aspectJAdvisorsBuilder = new BeanFactoryAspectJAdvisorsBuilderAdapter(beanFactory, this.aspectJAdvisorFactory);
 	}
 
-
+	/**
+	 * 获取所有切面
+	 */
 	@Override
 	protected List<Advisor> findCandidateAdvisors() {
-		// Add all the Spring advisors found according to superclass rules.
+		// 从 beanFactory 获取 advisor
 		List<Advisor> advisors = super.findCandidateAdvisors();
-		// Build Advisors for all AspectJ aspects in the bean factory.
+		// 根据 @Aspect 构建切面
 		if (this.aspectJAdvisorsBuilder != null) {
 			advisors.addAll(this.aspectJAdvisorsBuilder.buildAspectJAdvisors());
 		}
 		return advisors;
 	}
 
+	/**
+	 * 判断 beanClass 是否是 aop 相关类
+	 * 如果 beanClass 是 aop 相关类 或 beanClass 是一个切面, 则认为 beanClass 是 aop 相关类
+	 */
 	@Override
 	protected boolean isInfrastructureClass(Class<?> beanClass) {
 		// Previously we setProxyTargetClass(true) in the constructor, but that has too
@@ -111,10 +126,8 @@ public class AnnotationAwareAspectJAutoProxyCreator extends AspectJAwareAdvisorA
 	}
 
 	/**
-	 * Check whether the given aspect bean is eligible for auto-proxying.
-	 * <p>If no &lt;aop:include&gt; elements were used then "includePatterns" will be
-	 * {@code null} and all beans are included. If "includePatterns" is non-null,
-	 * then one of the patterns must match.
+	 * 判断 aspect bean 是否符合给定的格式
+	 * 如果不符合, 则将被跳过
 	 */
 	protected boolean isEligibleAspectBean(String beanName) {
 		if (this.includePatterns == null) {
@@ -130,11 +143,6 @@ public class AnnotationAwareAspectJAutoProxyCreator extends AspectJAwareAdvisorA
 		}
 	}
 
-
-	/**
-	 * Subclass of BeanFactoryAspectJAdvisorsBuilderAdapter that delegates to
-	 * surrounding AnnotationAwareAspectJAutoProxyCreator facilities.
-	 */
 	private class BeanFactoryAspectJAdvisorsBuilderAdapter extends BeanFactoryAspectJAdvisorsBuilder {
 
 		public BeanFactoryAspectJAdvisorsBuilderAdapter(ListableBeanFactory beanFactory, AspectJAdvisorFactory advisorFactory) {

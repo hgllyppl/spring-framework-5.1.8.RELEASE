@@ -16,8 +16,6 @@
 
 package org.springframework.aop.framework.autoproxy;
 
-import java.util.List;
-
 import org.springframework.aop.Advisor;
 import org.springframework.aop.TargetSource;
 import org.springframework.aop.support.AopUtils;
@@ -26,6 +24,8 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.util.List;
 
 /**
  * Generic auto proxy creator that builds AOP proxies for specific beans
@@ -52,7 +52,7 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	@Nullable
 	private BeanFactoryAdvisorRetrievalHelper advisorRetrievalHelper;
 
-
+	// 注入 beanFactory
 	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
 		super.setBeanFactory(beanFactory);
@@ -60,13 +60,14 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 			throw new IllegalArgumentException(
 					"AdvisorAutoProxyCreator requires a ConfigurableListableBeanFactory: " + beanFactory);
 		}
+		// 附带进行初始化操作, 这种隐藏操作最烦人
+		// 如果要初始化做操作, 应该是实现 InitializingBean
 		initBeanFactory((ConfigurableListableBeanFactory) beanFactory);
 	}
 
 	protected void initBeanFactory(ConfigurableListableBeanFactory beanFactory) {
 		this.advisorRetrievalHelper = new BeanFactoryAdvisorRetrievalHelperAdapter(beanFactory);
 	}
-
 
 	@Override
 	@Nullable
@@ -101,8 +102,7 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	}
 
 	/**
-	 * Find all candidate Advisors to use in auto-proxying.
-	 * @return the List of candidate Advisors
+	 * 获取所有切面
 	 */
 	protected List<Advisor> findCandidateAdvisors() {
 		Assert.state(this.advisorRetrievalHelper != null, "No BeanFactoryAdvisorRetrievalHelper available");
@@ -131,10 +131,7 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	}
 
 	/**
-	 * Return whether the Advisor bean with the given name is eligible
-	 * for proxying in the first place.
-	 * @param beanName the name of the Advisor bean
-	 * @return whether the bean is eligible
+	 * 检查给定 bean 是否是一个合格的 aspect
 	 */
 	protected boolean isEligibleAdvisorBean(String beanName) {
 		return true;
@@ -174,11 +171,6 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 		return true;
 	}
 
-
-	/**
-	 * Subclass of BeanFactoryAdvisorRetrievalHelper that delegates to
-	 * surrounding AbstractAdvisorAutoProxyCreator facilities.
-	 */
 	private class BeanFactoryAdvisorRetrievalHelperAdapter extends BeanFactoryAdvisorRetrievalHelper {
 
 		public BeanFactoryAdvisorRetrievalHelperAdapter(ConfigurableListableBeanFactory beanFactory) {
@@ -190,5 +182,4 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 			return AbstractAdvisorAutoProxyCreator.this.isEligibleAdvisorBean(beanName);
 		}
 	}
-
 }

@@ -94,19 +94,24 @@ public class AspectJAwareAdvisorAutoProxyCreator extends AbstractAdvisorAutoProx
 		AspectJProxyUtils.makeAdvisorChainAspectJCapableIfNecessary(candidateAdvisors);
 	}
 
+	/**
+	 * 是否不需要代理 bean
+	 * 获取所有切面并迭代, 判断其名称是否和 beanName 相同, 如果相同, 则认为不需要代理
+	 */
 	@Override
 	protected boolean shouldSkip(Class<?> beanClass, String beanName) {
-		// TODO: Consider optimization by caching the list of the aspect names
+		// 获取所有切面
 		List<Advisor> candidateAdvisors = findCandidateAdvisors();
+		// 迭代切面并判断其名称是否和 beanName 相同
 		for (Advisor advisor : candidateAdvisors) {
 			if (advisor instanceof AspectJPointcutAdvisor
 					&& ((AspectJPointcutAdvisor) advisor).getAspectName().equals(beanName)) {
 				return true;
 			}
 		}
+		// 判断 beanName 是否是 original instance
 		return super.shouldSkip(beanClass, beanName);
 	}
-
 
 	/**
 	 * Implements AspectJ PartialComparable interface for defining partial orderings.
@@ -155,5 +160,4 @@ public class AspectJAwareAdvisorAutoProxyCreator extends AbstractAdvisorAutoProx
 			return sb.toString();
 		}
 	}
-
 }

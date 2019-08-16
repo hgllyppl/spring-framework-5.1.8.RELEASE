@@ -16,9 +16,6 @@
 
 package org.springframework.aop.config;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.springframework.aop.aspectj.annotation.AnnotationAwareAspectJAutoProxyCreator;
 import org.springframework.aop.aspectj.autoproxy.AspectJAwareAdvisorAutoProxyCreator;
 import org.springframework.aop.framework.autoproxy.InfrastructureAdvisorAutoProxyCreator;
@@ -28,6 +25,9 @@ import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.core.Ordered;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Utility class for handling registration of AOP auto-proxy creators.
@@ -48,8 +48,7 @@ public abstract class AopConfigUtils {
 	/**
 	 * The bean name of the internally managed auto-proxy creator.
 	 */
-	public static final String AUTO_PROXY_CREATOR_BEAN_NAME =
-			"org.springframework.aop.config.internalAutoProxyCreator";
+	public static final String AUTO_PROXY_CREATOR_BEAN_NAME = "org.springframework.aop.config.internalAutoProxyCreator";
 
 	/**
 	 * Stores the auto proxy creator classes in escalation order.
@@ -63,43 +62,40 @@ public abstract class AopConfigUtils {
 		APC_PRIORITY_LIST.add(AnnotationAwareAspectJAutoProxyCreator.class);
 	}
 
-
+	// 注册 InfrastructureAdvisorAutoProxyCreator
 	@Nullable
 	public static BeanDefinition registerAutoProxyCreatorIfNecessary(BeanDefinitionRegistry registry) {
 		return registerAutoProxyCreatorIfNecessary(registry, null);
 	}
 
 	@Nullable
-	public static BeanDefinition registerAutoProxyCreatorIfNecessary(
-			BeanDefinitionRegistry registry, @Nullable Object source) {
-
+	public static BeanDefinition registerAutoProxyCreatorIfNecessary(BeanDefinitionRegistry registry, @Nullable Object source) {
 		return registerOrEscalateApcAsRequired(InfrastructureAdvisorAutoProxyCreator.class, registry, source);
 	}
 
+	// 注册 AspectJAwareAdvisorAutoProxyCreator
 	@Nullable
 	public static BeanDefinition registerAspectJAutoProxyCreatorIfNecessary(BeanDefinitionRegistry registry) {
 		return registerAspectJAutoProxyCreatorIfNecessary(registry, null);
 	}
 
 	@Nullable
-	public static BeanDefinition registerAspectJAutoProxyCreatorIfNecessary(
-			BeanDefinitionRegistry registry, @Nullable Object source) {
-
+	public static BeanDefinition registerAspectJAutoProxyCreatorIfNecessary(BeanDefinitionRegistry registry, @Nullable Object source) {
 		return registerOrEscalateApcAsRequired(AspectJAwareAdvisorAutoProxyCreator.class, registry, source);
 	}
 
+	// 注册 AnnotationAwareAspectJAutoProxyCreator
 	@Nullable
 	public static BeanDefinition registerAspectJAnnotationAutoProxyCreatorIfNecessary(BeanDefinitionRegistry registry) {
 		return registerAspectJAnnotationAutoProxyCreatorIfNecessary(registry, null);
 	}
 
 	@Nullable
-	public static BeanDefinition registerAspectJAnnotationAutoProxyCreatorIfNecessary(
-			BeanDefinitionRegistry registry, @Nullable Object source) {
-
+	public static BeanDefinition registerAspectJAnnotationAutoProxyCreatorIfNecessary(BeanDefinitionRegistry registry, @Nullable Object source) {
 		return registerOrEscalateApcAsRequired(AnnotationAwareAspectJAutoProxyCreator.class, registry, source);
 	}
 
+	// 设置 proxyTargetClass 属性
 	public static void forceAutoProxyCreatorToUseClassProxying(BeanDefinitionRegistry registry) {
 		if (registry.containsBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME)) {
 			BeanDefinition definition = registry.getBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME);
@@ -107,6 +103,7 @@ public abstract class AopConfigUtils {
 		}
 	}
 
+	// 设置 exposeProxy 属性
 	public static void forceAutoProxyCreatorToExposeProxy(BeanDefinitionRegistry registry) {
 		if (registry.containsBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME)) {
 			BeanDefinition definition = registry.getBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME);
@@ -115,11 +112,9 @@ public abstract class AopConfigUtils {
 	}
 
 	@Nullable
-	private static BeanDefinition registerOrEscalateApcAsRequired(
-			Class<?> cls, BeanDefinitionRegistry registry, @Nullable Object source) {
-
+	private static BeanDefinition registerOrEscalateApcAsRequired(Class<?> cls, BeanDefinitionRegistry registry, @Nullable Object source) {
 		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
-
+		// 如果已存在自动代理 bean 且 当前自动代理 class 的优先级更高, 则替换自动代理 class
 		if (registry.containsBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME)) {
 			BeanDefinition apcDefinition = registry.getBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME);
 			if (!cls.getName().equals(apcDefinition.getBeanClassName())) {
@@ -131,11 +126,13 @@ public abstract class AopConfigUtils {
 			}
 			return null;
 		}
-
+		// 实例化自动代理 beanDef
 		RootBeanDefinition beanDefinition = new RootBeanDefinition(cls);
 		beanDefinition.setSource(source);
+		// 设置 order 属性
 		beanDefinition.getPropertyValues().add("order", Ordered.HIGHEST_PRECEDENCE);
 		beanDefinition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
+		// 注册自动代理 beanDef
 		registry.registerBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME, beanDefinition);
 		return beanDefinition;
 	}
@@ -154,5 +151,4 @@ public abstract class AopConfigUtils {
 		throw new IllegalArgumentException(
 				"Class name [" + className + "] is not a known auto-proxy creator class");
 	}
-
 }

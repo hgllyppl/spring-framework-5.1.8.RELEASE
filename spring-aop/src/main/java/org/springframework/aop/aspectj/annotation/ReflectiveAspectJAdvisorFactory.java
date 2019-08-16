@@ -81,43 +81,31 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 		METHOD_COMPARATOR = adviceKindComparator.thenComparing(methodNameComparator);
 	}
 
-
 	@Nullable
 	private final BeanFactory beanFactory;
 
-
-	/**
-	 * Create a new {@code ReflectiveAspectJAdvisorFactory}.
-	 */
 	public ReflectiveAspectJAdvisorFactory() {
 		this(null);
 	}
 
 	/**
-	 * Create a new {@code ReflectiveAspectJAdvisorFactory}, propagating the given
-	 * {@link BeanFactory} to the created {@link AspectJExpressionPointcut} instances,
-	 * for bean pointcut handling as well as consistent {@link ClassLoader} resolution.
-	 * @param beanFactory the BeanFactory to propagate (may be {@code null}}
-	 * @since 4.3.6
-	 * @see AspectJExpressionPointcut#setBeanFactory
-	 * @see org.springframework.beans.factory.config.ConfigurableBeanFactory#getBeanClassLoader()
+	 * 创建 ReflectiveAspectJAdvisorFactory, 用于对给定的 aspect-bean-class 生成 advisor
 	 */
 	public ReflectiveAspectJAdvisorFactory(@Nullable BeanFactory beanFactory) {
 		this.beanFactory = beanFactory;
 	}
 
-
+	// 对给定 aspect-bean-class 生成 advisor
 	@Override
 	public List<Advisor> getAdvisors(MetadataAwareAspectInstanceFactory aspectInstanceFactory) {
+		// 取 aspectClass、aspectName
 		Class<?> aspectClass = aspectInstanceFactory.getAspectMetadata().getAspectClass();
 		String aspectName = aspectInstanceFactory.getAspectMetadata().getAspectName();
+		// 验证 aspectClass
 		validate(aspectClass);
-
-		// We need to wrap the MetadataAwareAspectInstanceFactory with a decorator
-		// so that it will only instantiate once.
-		MetadataAwareAspectInstanceFactory lazySingletonAspectInstanceFactory =
-				new LazySingletonAspectInstanceFactoryDecorator(aspectInstanceFactory);
-
+		// 包装成延迟加载 AspectInstanceFactory
+		MetadataAwareAspectInstanceFactory lazySingletonAspectInstanceFactory = new LazySingletonAspectInstanceFactoryDecorator(aspectInstanceFactory);
+		// 遍历 method 构建 before、after、around 等类型的 advisor
 		List<Advisor> advisors = new ArrayList<>();
 		for (Method method : getAdvisorMethods(aspectClass)) {
 			Advisor advisor = getAdvisor(method, lazySingletonAspectInstanceFactory, advisors.size(), aspectName);
@@ -125,28 +113,26 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 				advisors.add(advisor);
 			}
 		}
-
-		// If it's a per target aspect, emit the dummy instantiating aspect.
+		// 如果 advisor 非空且切面是延迟初始化的
 		if (!advisors.isEmpty() && lazySingletonAspectInstanceFactory.getAspectMetadata().isLazilyInstantiated()) {
+			// 添加延迟初始化的 advisor
 			Advisor instantiationAdvisor = new SyntheticInstantiationAdvisor(lazySingletonAspectInstanceFactory);
 			advisors.add(0, instantiationAdvisor);
 		}
-
-		// Find introduction fields.
+		// 遍历 field 构建 introduction 类型的 advisor
 		for (Field field : aspectClass.getDeclaredFields()) {
 			Advisor advisor = getDeclareParentsAdvisor(field);
 			if (advisor != null) {
 				advisors.add(advisor);
 			}
 		}
-
 		return advisors;
 	}
 
+	// 获取非 Pointcut 的 method
 	private List<Method> getAdvisorMethods(Class<?> aspectClass) {
 		final List<Method> methods = new ArrayList<>();
 		ReflectionUtils.doWithMethods(aspectClass, method -> {
-			// Exclude pointcuts
 			if (AnnotationUtils.getAnnotation(method, Pointcut.class) == null) {
 				methods.add(method);
 			}
@@ -156,57 +142,50 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 	}
 
 	/**
-	 * Build a {@link org.springframework.aop.aspectj.DeclareParentsAdvisor}
-	 * for the given introduction field.
-	 * <p>Resulting Advisors will need to be evaluated for targets.
-	 * @param introductionField the field to introspect
-	 * @return the Advisor instance, or {@code null} if not an Advisor
+	 * 构建 DeclareParentsAdvisor
 	 */
 	@Nullable
 	private Advisor getDeclareParentsAdvisor(Field introductionField) {
+		// 查找 DeclareParents
 		DeclareParents declareParents = introductionField.getAnnotation(DeclareParents.class);
 		if (declareParents == null) {
-			// Not an introduction field
 			return null;
 		}
-
 		if (DeclareParents.class == declareParents.defaultImpl()) {
 			throw new IllegalStateException("'defaultImpl' attribute must be set on DeclareParents");
 		}
-
-		return new DeclareParentsAdvisor(
-				introductionField.getType(), declareParents.value(), declareParents.defaultImpl());
+		// 构建 DeclareParentsAdvisor
+		return new DeclareParentsAdvisor(introductionField.getType(), declareParents.value(), declareParents.defaultImpl());
 	}
-
 
 	@Override
 	@Nullable
 	public Advisor getAdvisor(Method candidateAdviceMethod, MetadataAwareAspectInstanceFactory aspectInstanceFactory,
 			int declarationOrderInAspect, String aspectName) {
-
+		// 验证 aspectClass
 		validate(aspectInstanceFactory.getAspectMetadata().getAspectClass());
-
-		AspectJExpressionPointcut expressionPointcut = getPointcut(
-				candidateAdviceMethod, aspectInstanceFactory.getAspectMetadata().getAspectClass());
+		// 获取 pointcut
+		AspectJExpressionPointcut expressionPointcut = getPointcut(candidateAdviceMethod, aspectInstanceFactory.getAspectMetadata().getAspectClass());
 		if (expressionPointcut == null) {
 			return null;
 		}
-
+		// 构建 InstantiationModelAwarePointcutAdvisorImpl
 		return new InstantiationModelAwarePointcutAdvisorImpl(expressionPointcut, candidateAdviceMethod,
 				this, aspectInstanceFactory, declarationOrderInAspect, aspectName);
 	}
 
 	@Nullable
 	private AspectJExpressionPointcut getPointcut(Method candidateAdviceMethod, Class<?> candidateAspectClass) {
-		AspectJAnnotation<?> aspectJAnnotation =
-				AbstractAspectJAdvisorFactory.findAspectJAnnotationOnMethod(candidateAdviceMethod);
+		// 查找 aspectj annotation
+		AspectJAnnotation<?> aspectJAnnotation = findAspectJAnnotationOnMethod(candidateAdviceMethod);
 		if (aspectJAnnotation == null) {
 			return null;
 		}
-
-		AspectJExpressionPointcut ajexp =
-				new AspectJExpressionPointcut(candidateAspectClass, new String[0], new Class<?>[0]);
+		// 构建 AspectJExpressionPointcut
+		AspectJExpressionPointcut ajexp = new AspectJExpressionPointcut(candidateAspectClass, new String[0], new Class<?>[0]);
+		// 设置 expression
 		ajexp.setExpression(aspectJAnnotation.getPointcutExpression());
+		// 设置 beanFactory
 		if (this.beanFactory != null) {
 			ajexp.setBeanFactory(this.beanFactory);
 		}
@@ -218,30 +197,25 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 	@Nullable
 	public Advice getAdvice(Method candidateAdviceMethod, AspectJExpressionPointcut expressionPointcut,
 			MetadataAwareAspectInstanceFactory aspectInstanceFactory, int declarationOrder, String aspectName) {
-
+		// 验证 aspectClass
 		Class<?> candidateAspectClass = aspectInstanceFactory.getAspectMetadata().getAspectClass();
 		validate(candidateAspectClass);
-
-		AspectJAnnotation<?> aspectJAnnotation =
-				AbstractAspectJAdvisorFactory.findAspectJAnnotationOnMethod(candidateAdviceMethod);
+		// 取 aspectJAnnotation
+		AspectJAnnotation<?> aspectJAnnotation = findAspectJAnnotationOnMethod(candidateAdviceMethod);
 		if (aspectJAnnotation == null) {
 			return null;
 		}
-
-		// If we get here, we know we have an AspectJ method.
-		// Check that it's an AspectJ-annotated class
+		// 如果 candidateAspectClass 非 aspect, 则抛出异常
 		if (!isAspect(candidateAspectClass)) {
 			throw new AopConfigException("Advice must be declared inside an aspect type: " +
 					"Offending method '" + candidateAdviceMethod + "' in class [" +
 					candidateAspectClass.getName() + "]");
 		}
-
 		if (logger.isDebugEnabled()) {
 			logger.debug("Found AspectJ method: " + candidateAdviceMethod);
 		}
-
+		// 构建 advice
 		AbstractAspectJAdvice springAdvice;
-
 		switch (aspectJAnnotation.getAnnotationType()) {
 			case AtPointcut:
 				if (logger.isDebugEnabled()) {
@@ -280,16 +254,16 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 				throw new UnsupportedOperationException(
 						"Unsupported advice type on method: " + candidateAdviceMethod);
 		}
-
-		// Now to configure the advice...
+		// 设置 aspectName、declarationOrder
 		springAdvice.setAspectName(aspectName);
 		springAdvice.setDeclarationOrder(declarationOrder);
+		// 解析参数名称
 		String[] argNames = this.parameterNameDiscoverer.getParameterNames(candidateAdviceMethod);
 		if (argNames != null) {
 			springAdvice.setArgumentNamesFromStringArray(argNames);
 		}
+		// 绑定参数名称
 		springAdvice.calculateArgumentBindings();
-
 		return springAdvice;
 	}
 

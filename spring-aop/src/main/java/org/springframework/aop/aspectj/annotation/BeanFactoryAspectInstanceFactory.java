@@ -16,8 +16,6 @@
 
 package org.springframework.aop.aspectj.annotation;
 
-import java.io.Serializable;
-
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.core.Ordered;
@@ -25,6 +23,8 @@ import org.springframework.core.annotation.OrderUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
+
+import java.io.Serializable;
 
 /**
  * {@link org.springframework.aop.aspectj.AspectInstanceFactory} implementation
@@ -50,14 +50,7 @@ public class BeanFactoryAspectInstanceFactory implements MetadataAwareAspectInst
 
 	private final AspectMetadata aspectMetadata;
 
-
-	/**
-	 * Create a BeanFactoryAspectInstanceFactory. AspectJ will be called to
-	 * introspect to create AJType metadata using the type returned for the
-	 * given bean name from the BeanFactory.
-	 * @param beanFactory the BeanFactory to obtain instance(s) from
-	 * @param name name of the bean
-	 */
+	// 创建 BeanFactoryAspectInstanceFactory
 	public BeanFactoryAspectInstanceFactory(BeanFactory beanFactory, String name) {
 		this(beanFactory, name, null);
 	}
