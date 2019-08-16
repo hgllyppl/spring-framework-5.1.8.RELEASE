@@ -48,8 +48,8 @@ public class StaticAspect {
         LOGGER.info(TPL, StaticAspect.class.getSimpleName(), AFTER_RETURNING);
     }
 
-    @Around("staticPointcut()")
-    public Object around(ProceedingJoinPoint pjp) throws Throwable {
+    @Around("staticPointcut() && args(name)")
+    public Object around(ProceedingJoinPoint pjp, String name) throws Throwable {
         LOGGER.info(TPL, StaticAspect.class.getSimpleName(), AROUND);
         Object object = pjp.proceed();
         return object;

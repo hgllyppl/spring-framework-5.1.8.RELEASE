@@ -14,7 +14,7 @@ public class Student {
     private static final Logger LOGGER = LoggerFactory.getLogger(Student.class);
 
     @DynamicAnn
-    public void sayHello() {
-        LOGGER.info("hello, i'm a student");
+    public void sayHello(String name) {
+        LOGGER.info("hello, i'm a student, my name is {}", name);
     }
 }

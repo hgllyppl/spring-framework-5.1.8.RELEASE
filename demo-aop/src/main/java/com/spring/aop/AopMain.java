@@ -10,7 +10,7 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
  * Created by xin on 2019/4/22.
  */
 @ComponentScan
-@EnableAspectJAutoProxy(proxyTargetClass = true)
+@EnableAspectJAutoProxy(exposeProxy = true, proxyTargetClass = true)
 public class AopMain {
 
     // TODO 切面初始化
@@ -19,6 +19,6 @@ public class AopMain {
     public static void main(String[] args) {
         ApplicationContext ctx = new AnnotationConfigApplicationContext(AopMain.class);
         Student student = ctx.getBean(Student.class);
-        student.sayHello();
+        student.sayHello("z3");
     }
 }
