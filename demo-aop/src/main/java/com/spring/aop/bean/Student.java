@@ -18,6 +18,10 @@ public class Student {
     @DynamicAnn
     public String sayHello(String name) {
         LOGGER.info("hello, i'm a student, my name is {}", name);
-        return String.valueOf(new Random().nextInt());
+        int random = new Random().nextInt();
+        if (random % 2 != 0 ) {
+            return String.valueOf(random);
+        }
+        throw new RuntimeException("sayHello run time error!");
     }
 }
