@@ -3,6 +3,7 @@ package com.spring.aop.aspect;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.After;
 import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.annotation.AfterThrowing;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
@@ -22,36 +23,44 @@ import org.springframework.stereotype.Component;
 public class StaticAspect {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StaticAspect.class);
+    private static final String CLAZZ_NAME = StaticAspect.class.getSimpleName();
 
     public static final String TPL = "{}.{}";
-    public static final String BEFORE = "before";
-    public static final String AFTER = "after";
+
+    public static final String AFTER_THROWING = "afterThrowing";
     public static final String AFTER_RETURNING = "afterReturning";
+    public static final String AFTER = "after";
     public static final String AROUND = "around";
+    public static final String BEFORE = "before";
 
     @Pointcut("execution(public * com.spring.aop.bean.*.*(..))")
     public void staticPointcut() {
     }
 
-    @Before("staticPointcut()")
-    public void before() {
-        LOGGER.info(TPL, StaticAspect.class.getSimpleName(), BEFORE);
+    @AfterThrowing(value = "staticPointcut()", throwing = "ex")
+    public void afterThrowing(Exception ex) {
+        LOGGER.info(TPL, CLAZZ_NAME, AFTER_THROWING);
+    }
+
+    @AfterReturning(value = "staticPointcut()", returning = "returnVal")
+    public void afterReturning(String returnVal) {
+        LOGGER.info(TPL, CLAZZ_NAME, AFTER_RETURNING);
     }
 
     @After("staticPointcut()")
     public void after() {
-        LOGGER.info(TPL, StaticAspect.class.getSimpleName(), AFTER);
+        LOGGER.info(TPL, CLAZZ_NAME, AFTER);
     }
 
-    @AfterReturning("staticPointcut()")
-    public void afterReturning() {
-        LOGGER.info(TPL, StaticAspect.class.getSimpleName(), AFTER_RETURNING);
-    }
-
-    @Around("staticPointcut() && args(name)")
+    @Around(value = "staticPointcut() && args(name)", argNames = "pjp, name")
     public Object around(ProceedingJoinPoint pjp, String name) throws Throwable {
-        LOGGER.info(TPL, StaticAspect.class.getSimpleName(), AROUND);
+        LOGGER.info(TPL, CLAZZ_NAME, AROUND);
         Object object = pjp.proceed();
         return object;
+    }
+
+    @Before("staticPointcut()")
+    public void before() {
+        LOGGER.info(TPL, CLAZZ_NAME, BEFORE);
     }
 }
