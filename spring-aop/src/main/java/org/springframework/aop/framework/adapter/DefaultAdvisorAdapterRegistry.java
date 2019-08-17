@@ -16,15 +16,14 @@
 
 package org.springframework.aop.framework.adapter;
 
+import org.aopalliance.aop.Advice;
+import org.aopalliance.intercept.MethodInterceptor;
+import org.springframework.aop.Advisor;
+import org.springframework.aop.support.DefaultPointcutAdvisor;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.aopalliance.aop.Advice;
-import org.aopalliance.intercept.MethodInterceptor;
-
-import org.springframework.aop.Advisor;
-import org.springframework.aop.support.DefaultPointcutAdvisor;
 
 /**
  * Default implementation of the {@link AdvisorAdapterRegistry} interface.
@@ -42,9 +41,8 @@ public class DefaultAdvisorAdapterRegistry implements AdvisorAdapterRegistry, Se
 
 	private final List<AdvisorAdapter> adapters = new ArrayList<>(3);
 
-
 	/**
-	 * Create a new DefaultAdvisorAdapterRegistry, registering well-known adapters.
+	 * 注册默认的 advice 适配器
 	 */
 	public DefaultAdvisorAdapterRegistry() {
 		registerAdvisorAdapter(new MethodBeforeAdviceAdapter());
@@ -52,26 +50,29 @@ public class DefaultAdvisorAdapterRegistry implements AdvisorAdapterRegistry, Se
 		registerAdvisorAdapter(new ThrowsAdviceAdapter());
 	}
 
-
+	// 将 advice 包装成 advisor
 	@Override
 	public Advisor wrap(Object adviceObject) throws UnknownAdviceTypeException {
+		// 如果 adviceObject 是 Advisor, 则直接返回
 		if (adviceObject instanceof Advisor) {
 			return (Advisor) adviceObject;
 		}
+		// 如果 adviceObject 不是 advice, 则抛出异常
 		if (!(adviceObject instanceof Advice)) {
 			throw new UnknownAdviceTypeException(adviceObject);
 		}
+		// 如果 adviceObject 是 MethodInterceptor, 则包装成 DefaultPointcutAdvisor
 		Advice advice = (Advice) adviceObject;
 		if (advice instanceof MethodInterceptor) {
-			// So well-known it doesn't even need an adapter.
 			return new DefaultPointcutAdvisor(advice);
 		}
+		// 如果 adviceObject 是支持的 advice 类型, 则包装成 DefaultPointcutAdvisor
 		for (AdvisorAdapter adapter : this.adapters) {
-			// Check that it is supported.
 			if (adapter.supportsAdvice(advice)) {
 				return new DefaultPointcutAdvisor(advice);
 			}
 		}
+		// 以上都不是, 则抛出异常
 		throw new UnknownAdviceTypeException(advice);
 	}
 
@@ -93,6 +94,7 @@ public class DefaultAdvisorAdapterRegistry implements AdvisorAdapterRegistry, Se
 		return interceptors.toArray(new MethodInterceptor[0]);
 	}
 
+	// 注册 advice 适配器
 	@Override
 	public void registerAdvisorAdapter(AdvisorAdapter adapter) {
 		this.adapters.add(adapter);

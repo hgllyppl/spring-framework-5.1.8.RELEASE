@@ -91,31 +91,28 @@ public class ProxyProcessorSupport extends ProxyConfig implements Ordered, BeanC
 		}
 	}
 
-
 	/**
-	 * Check the interfaces on the given bean class and apply them to the {@link ProxyFactory},
-	 * if appropriate.
-	 * <p>Calls {@link #isConfigurationCallbackInterface} and {@link #isInternalLanguageInterface}
-	 * to filter for reasonable proxy interfaces, falling back to a target-class proxy otherwise.
-	 * @param beanClass the class of the bean
-	 * @param proxyFactory the ProxyFactory for the bean
+	 * 决定使用接口代理还是类代理
 	 */
 	protected void evaluateProxyInterfaces(Class<?> beanClass, ProxyFactory proxyFactory) {
+		// 获取所有接口
 		Class<?>[] targetInterfaces = ClassUtils.getAllInterfacesForClass(beanClass, getProxyClassLoader());
+		// 如果 targetInterfaces 不包含配置接口、语言接口且接口内有方法
+		// 则认为有合理的接口可代理
 		boolean hasReasonableProxyInterface = false;
 		for (Class<?> ifc : targetInterfaces) {
-			if (!isConfigurationCallbackInterface(ifc) && !isInternalLanguageInterface(ifc) &&
-					ifc.getMethods().length > 0) {
+			if (!isConfigurationCallbackInterface(ifc) && !isInternalLanguageInterface(ifc) && ifc.getMethods().length > 0) {
 				hasReasonableProxyInterface = true;
 				break;
 			}
 		}
+		// 如果有合理的接口可代理, 则将接口加入 proxyFactory
 		if (hasReasonableProxyInterface) {
-			// Must allow for introductions; can't just set interfaces to the target's interfaces only.
 			for (Class<?> ifc : targetInterfaces) {
 				proxyFactory.addInterface(ifc);
 			}
 		}
+		// 反之, 则使用 cglib 代理
 		else {
 			proxyFactory.setProxyTargetClass(true);
 		}
@@ -130,8 +127,11 @@ public class ProxyProcessorSupport extends ProxyConfig implements Ordered, BeanC
 	 * @return whether the given interface is just a container callback
 	 */
 	protected boolean isConfigurationCallbackInterface(Class<?> ifc) {
-		return (InitializingBean.class == ifc || DisposableBean.class == ifc || Closeable.class == ifc ||
-				AutoCloseable.class == ifc || ObjectUtils.containsElement(ifc.getInterfaces(), Aware.class));
+		return InitializingBean.class == ifc
+				|| DisposableBean.class == ifc
+				|| Closeable.class == ifc
+				|| AutoCloseable.class == ifc
+				|| ObjectUtils.containsElement(ifc.getInterfaces(), Aware.class);
 	}
 
 	/**
@@ -143,9 +143,8 @@ public class ProxyProcessorSupport extends ProxyConfig implements Ordered, BeanC
 	 * @return whether the given interface is an internal language interface
 	 */
 	protected boolean isInternalLanguageInterface(Class<?> ifc) {
-		return (ifc.getName().equals("groovy.lang.GroovyObject") ||
-				ifc.getName().endsWith(".cglib.proxy.Factory") ||
-				ifc.getName().endsWith(".bytebuddy.MockAccess"));
+		return ifc.getName().equals("groovy.lang.GroovyObject")
+				|| ifc.getName().endsWith(".cglib.proxy.Factory")
+				|| ifc.getName().endsWith(".bytebuddy.MockAccess");
 	}
-
 }

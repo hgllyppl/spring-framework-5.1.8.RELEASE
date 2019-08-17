@@ -103,15 +103,11 @@ public abstract class AutoProxyUtils {
 	}
 
 	/**
-	 * Expose the given target class for the specified bean, if possible.
-	 * @param beanFactory the containing ConfigurableListableBeanFactory
-	 * @param beanName the name of the bean
-	 * @param targetClass the corresponding target class
-	 * @since 4.2.3
+	 * beanDef.setAttribute
+	 * org.springframework.aop.framework.autoproxy.originalTargetClass
 	 */
 	static void exposeTargetClass(
 			ConfigurableListableBeanFactory beanFactory, @Nullable String beanName, Class<?> targetClass) {
-
 		if (beanName != null && beanFactory.containsBeanDefinition(beanName)) {
 			beanFactory.getMergedBeanDefinition(beanName).setAttribute(ORIGINAL_TARGET_CLASS_ATTRIBUTE, targetClass);
 		}

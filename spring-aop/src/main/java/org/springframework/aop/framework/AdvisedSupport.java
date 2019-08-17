@@ -16,18 +16,7 @@
 
 package org.springframework.aop.framework;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.aopalliance.aop.Advice;
-
 import org.springframework.aop.Advisor;
 import org.springframework.aop.DynamicIntroductionAdvice;
 import org.springframework.aop.IntroductionAdvisor;
@@ -41,6 +30,16 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Base class for AOP proxy configuration managers.
@@ -63,61 +62,49 @@ public class AdvisedSupport extends ProxyConfig implements Advised {
 	/** use serialVersionUID from Spring 2.0 for interoperability. */
 	private static final long serialVersionUID = 2651364800145442165L;
 
-
 	/**
-	 * Canonical TargetSource when there's no target, and behavior is
-	 * supplied by the advisors.
+	 * EMPTY_TARGET_SOURCE
 	 */
 	public static final TargetSource EMPTY_TARGET_SOURCE = EmptyTargetSource.INSTANCE;
 
-
-	/** Package-protected to allow direct access for efficiency. */
+	// targetSource, 用于获取目标类
 	TargetSource targetSource = EMPTY_TARGET_SOURCE;
 
 	/** Whether the Advisors are already filtered for the specific target class. */
 	private boolean preFiltered = false;
 
-	/** The AdvisorChainFactory to use. */
+	/**
+	 * advisorChainFactory, 用于为目标类的方法生成切面
+	 * @see DefaultAdvisorChainFactory#getInterceptorsAndDynamicInterceptionAdvice
+ 	 */
 	AdvisorChainFactory advisorChainFactory = new DefaultAdvisorChainFactory();
 
-	/** Cache with Method as key and advisor chain List as value. */
+	// 为目标类方法缓存切面, 而不是每次执行时都通过 advisorChainFactory 获取
 	private transient Map<MethodCacheKey, List<Object>> methodCache;
 
 	/**
-	 * Interfaces to be implemented by the proxy. Held in List to keep the order
-	 * of registration, to create JDK proxy with specified order of interfaces.
+	 * 目标类实现的接口, 可通过 jdk 实现代理
 	 */
 	private List<Class<?>> interfaces = new ArrayList<>();
 
 	/**
-	 * List of Advisors. If an Advice is added, it will be wrapped
-	 * in an Advisor before being added to this List.
+	 * 应用于目标类的所有切面
 	 */
 	private List<Advisor> advisors = new ArrayList<>();
 
 	/**
-	 * Array updated on changes to the advisors list, which is easier
-	 * to manipulate internally.
+	 * advisors -> advisorArray
 	 */
 	private Advisor[] advisorArray = new Advisor[0];
 
-
-	/**
-	 * No-arg constructor for use as a JavaBean.
-	 */
 	public AdvisedSupport() {
 		this.methodCache = new ConcurrentHashMap<>(32);
 	}
 
-	/**
-	 * Create a AdvisedSupport instance with the given parameters.
-	 * @param interfaces the proxied interfaces
-	 */
 	public AdvisedSupport(Class<?>... interfaces) {
 		this();
 		setInterfaces(interfaces);
 	}
-
 
 	/**
 	 * Set the given object as target.
@@ -129,6 +116,7 @@ public class AdvisedSupport extends ProxyConfig implements Advised {
 		setTargetSource(new SingletonTargetSource(target));
 	}
 
+	// 设置 targetSource
 	@Override
 	public void setTargetSource(@Nullable TargetSource targetSource) {
 		this.targetSource = (targetSource != null ? targetSource : EMPTY_TARGET_SOURCE);
@@ -188,7 +176,6 @@ public class AdvisedSupport extends ProxyConfig implements Advised {
 		return this.advisorChainFactory;
 	}
 
-
 	/**
 	 * Set the interfaces to be proxied.
 	 */
@@ -201,8 +188,7 @@ public class AdvisedSupport extends ProxyConfig implements Advised {
 	}
 
 	/**
-	 * Add a new proxied interface.
-	 * @param intf the additional interface to proxy
+	 * 添加目标类实现的接口
 	 */
 	public void addInterface(Class<?> intf) {
 		Assert.notNull(intf, "Interface must not be null");
@@ -317,8 +303,7 @@ public class AdvisedSupport extends ProxyConfig implements Advised {
 	}
 
 	/**
-	 * Add all of the given advisors to this proxy configuration.
-	 * @param advisors the advisors to register
+	 * 添加切面
 	 */
 	public void addAdvisors(Advisor... advisors) {
 		addAdvisors(Arrays.asList(advisors));

@@ -23,10 +23,10 @@ import org.springframework.aop.Advisor;
 import org.springframework.aop.Pointcut;
 import org.springframework.aop.TargetSource;
 import org.springframework.aop.framework.AopInfrastructureBean;
-import org.springframework.aop.framework.DefaultAdvisorChainFactory;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.aop.framework.ProxyProcessorSupport;
 import org.springframework.aop.framework.adapter.AdvisorAdapterRegistry;
+import org.springframework.aop.framework.adapter.DefaultAdvisorAdapterRegistry;
 import org.springframework.aop.framework.adapter.GlobalAdvisorAdapterRegistry;
 import org.springframework.aop.target.SingletonTargetSource;
 import org.springframework.beans.BeansException;
@@ -109,7 +109,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 
 	/**
 	 * 用于适配 advice
-	 * @see DefaultAdvisorChainFactory#getInterceptorsAndDynamicInterceptionAdvice
+	 * @see DefaultAdvisorAdapterRegistry#wrap
 	 */
 	private AdvisorAdapterRegistry advisorAdapterRegistry = GlobalAdvisorAdapterRegistry.getInstance();
 
@@ -121,7 +121,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 
 	// 默认 interceptor
 	private String[] interceptorNames = new String[0];
-	// 优先应用默认 interceptor
+	// 优先应用公共 interceptor
 	private boolean applyCommonInterceptorsFirst = true;
 	// 自定义 TargetSourceCreator
 	@Nullable
@@ -334,12 +334,10 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 			return bean;
 		}
 		// 获取拦截器(切面)
-		// TODO
 		Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, null);
 		// 构建代理并返回
 		if (specificInterceptors != DO_NOT_PROXY) {
 			this.advisedBeans.put(cacheKey, Boolean.TRUE);
-			// TODO
 			Object proxy = createProxy(bean.getClass(), beanName, specificInterceptors, new SingletonTargetSource(bean));
 			this.proxyTypes.put(cacheKey, proxy.getClass());
 			return proxy;
@@ -405,26 +403,18 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	}
 
 	/**
-	 * Create an AOP proxy for the given bean.
-	 * @param beanClass the class of the bean
-	 * @param beanName the name of the bean
-	 * @param specificInterceptors the set of interceptors that is
-	 * specific to this bean (may be empty, but not null)
-	 * @param targetSource the TargetSource for the proxy,
-	 * already pre-configured to access the bean
-	 * @return the AOP proxy for the bean
-	 * @see #buildAdvisors
+	 * 为 bean 创建代理
 	 */
 	protected Object createProxy(Class<?> beanClass, @Nullable String beanName,
 			@Nullable Object[] specificInterceptors, TargetSource targetSource) {
-
+		// 设置 beanDef.attribute originalTargetClass
 		if (this.beanFactory instanceof ConfigurableListableBeanFactory) {
 			AutoProxyUtils.exposeTargetClass((ConfigurableListableBeanFactory) this.beanFactory, beanName, beanClass);
 		}
-
+		// 创建 ProxyFactory
 		ProxyFactory proxyFactory = new ProxyFactory();
 		proxyFactory.copyFrom(this);
-
+		// 决定是否使用 cglib 代理
 		if (!proxyFactory.isProxyTargetClass()) {
 			if (shouldProxyTargetClass(beanClass, beanName)) {
 				proxyFactory.setProxyTargetClass(true);
@@ -433,28 +423,26 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 				evaluateProxyInterfaces(beanClass, proxyFactory);
 			}
 		}
-
+		// 合并 commonInterceptors 与 specificInterceptors
 		Advisor[] advisors = buildAdvisors(beanName, specificInterceptors);
+		// 设置 advisor
 		proxyFactory.addAdvisors(advisors);
+		// 设置目标 bean
 		proxyFactory.setTargetSource(targetSource);
+		// 提供子类处理 proxyFactory 的机会
 		customizeProxyFactory(proxyFactory);
-
+		// ???
 		proxyFactory.setFrozen(this.freezeProxy);
+		// ???
 		if (advisorsPreFiltered()) {
 			proxyFactory.setPreFiltered(true);
 		}
-
+		// 创建代理
 		return proxyFactory.getProxy(getProxyClassLoader());
 	}
 
 	/**
-	 * Determine whether the given bean should be proxied with its target class rather than its interfaces.
-	 * <p>Checks the {@link AutoProxyUtils#PRESERVE_TARGET_CLASS_ATTRIBUTE "preserveTargetClass" attribute}
-	 * of the corresponding bean definition.
-	 * @param beanClass the class of the bean
-	 * @param beanName the name of the bean
-	 * @return whether the given bean should be proxied with its target class
-	 * @see AutoProxyUtils#shouldProxyTargetClass
+	 * 判断 AutoProxyUtils.preserveTargetClass attribute 是否为 true
 	 */
 	protected boolean shouldProxyTargetClass(Class<?> beanClass, @Nullable String beanName) {
 		return (this.beanFactory instanceof ConfigurableListableBeanFactory &&
@@ -476,55 +464,57 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	}
 
 	/**
-	 * Determine the advisors for the given bean, including the specific interceptors
-	 * as well as the common interceptor, all adapted to the Advisor interface.
-	 * @param beanName the name of the bean
-	 * @param specificInterceptors the set of interceptors that is
-	 * specific to this bean (may be empty, but not null)
-	 * @return the list of Advisors for the given bean
+	 * 合并 commonInterceptors 与 specificInterceptors
+	 * @see #interceptorNames
 	 */
 	protected Advisor[] buildAdvisors(@Nullable String beanName, @Nullable Object[] specificInterceptors) {
-		// Handle prototypes correctly...
+		// 获取 commonInterceptors
 		Advisor[] commonInterceptors = resolveInterceptorNames();
-
+		// 合并 commonInterceptors、specificInterceptors
 		List<Object> allInterceptors = new ArrayList<>();
 		if (specificInterceptors != null) {
 			allInterceptors.addAll(Arrays.asList(specificInterceptors));
 			if (commonInterceptors.length > 0) {
+				// 如果优先应用 commonInterceptors, 则将其加在列表前面
 				if (this.applyCommonInterceptorsFirst) {
 					allInterceptors.addAll(0, Arrays.asList(commonInterceptors));
 				}
+				// 反之, 则加在列表末尾
 				else {
 					allInterceptors.addAll(Arrays.asList(commonInterceptors));
 				}
 			}
 		}
+		// 打印日志
 		if (logger.isTraceEnabled()) {
 			int nrOfCommonInterceptors = commonInterceptors.length;
 			int nrOfSpecificInterceptors = (specificInterceptors != null ? specificInterceptors.length : 0);
 			logger.trace("Creating implicit proxy for bean '" + beanName + "' with " + nrOfCommonInterceptors +
 					" common interceptors and " + nrOfSpecificInterceptors + " specific interceptors");
 		}
-
+		// 再次适配 advice
 		Advisor[] advisors = new Advisor[allInterceptors.size()];
 		for (int i = 0; i < allInterceptors.size(); i++) {
 			advisors[i] = this.advisorAdapterRegistry.wrap(allInterceptors.get(i));
 		}
+		// 返回 advisors
 		return advisors;
 	}
 
 	/**
-	 * Resolves the specified interceptor names to Advisor objects.
-	 * @see #setInterceptorNames
+	 * 获取公共 advisor
+	 * @see #interceptorNames
 	 */
 	private Advisor[] resolveInterceptorNames() {
 		BeanFactory bf = this.beanFactory;
 		ConfigurableBeanFactory cbf = (bf instanceof ConfigurableBeanFactory ? (ConfigurableBeanFactory) bf : null);
 		List<Advisor> advisors = new ArrayList<>();
+		// 获取 interceptors 并将其包装成 advisor
 		for (String beanName : this.interceptorNames) {
 			if (cbf == null || !cbf.isCurrentlyInCreation(beanName)) {
 				Assert.state(bf != null, "BeanFactory required for resolving interceptor names");
 				Object next = bf.getBean(beanName);
+				// 包装 advice
 				advisors.add(this.advisorAdapterRegistry.wrap(next));
 			}
 		}

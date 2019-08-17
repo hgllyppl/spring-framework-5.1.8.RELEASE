@@ -24,7 +24,6 @@ import org.springframework.aop.aspectj.AbstractAspectJAdvice;
 import org.springframework.aop.aspectj.AspectJPointcutAdvisor;
 import org.springframework.aop.aspectj.AspectJProxyUtils;
 import org.springframework.aop.framework.autoproxy.AbstractAdvisorAutoProxyCreator;
-import org.springframework.aop.interceptor.ExposeInvocationInterceptor;
 import org.springframework.core.Ordered;
 import org.springframework.util.ClassUtils;
 
@@ -68,8 +67,7 @@ public class AspectJAwareAdvisorAutoProxyCreator extends AbstractAdvisorAutoProx
 	protected List<Advisor> sortAdvisors(List<Advisor> advisors) {
 		List<PartiallyComparableAdvisorHolder> partiallyComparableAdvisors = new ArrayList<>(advisors.size());
 		for (Advisor element : advisors) {
-			partiallyComparableAdvisors.add(
-					new PartiallyComparableAdvisorHolder(element, DEFAULT_PRECEDENCE_COMPARATOR));
+			partiallyComparableAdvisors.add(new PartiallyComparableAdvisorHolder(element, DEFAULT_PRECEDENCE_COMPARATOR));
 		}
 		List<PartiallyComparableAdvisorHolder> sorted = PartialOrder.sort(partiallyComparableAdvisors);
 		if (sorted != null) {
@@ -85,9 +83,7 @@ public class AspectJAwareAdvisorAutoProxyCreator extends AbstractAdvisorAutoProx
 	}
 
 	/**
-	 * Adds an {@link ExposeInvocationInterceptor} to the beginning of the advice chain.
-	 * These additional advices are needed when using AspectJ expression pointcuts
-	 * and when using AspectJ-style advice.
+	 * 添加 ExposeInvocationInterceptor
 	 */
 	@Override
 	protected void extendAdvisors(List<Advisor> candidateAdvisors) {

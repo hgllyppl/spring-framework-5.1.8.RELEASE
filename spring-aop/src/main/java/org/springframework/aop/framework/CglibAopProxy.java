@@ -16,22 +16,10 @@
 
 package org.springframework.aop.framework;
 
-import java.io.Serializable;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.lang.reflect.UndeclaredThrowableException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.WeakHashMap;
-
 import org.aopalliance.aop.Advice;
 import org.aopalliance.intercept.MethodInvocation;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.Advisor;
 import org.springframework.aop.AopInvocationException;
 import org.springframework.aop.PointcutAdvisor;
@@ -55,6 +43,20 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
+
+import java.io.Serializable;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.UndeclaredThrowableException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.WeakHashMap;
+
+import static org.springframework.util.ClassUtils.getAllInterfacesForClassAsSet;
 
 /**
  * CGLIB-based {@link AopProxy} implementation for the Spring AOP framework.
@@ -99,8 +101,7 @@ class CglibAopProxy implements AopProxy, Serializable {
 	/** Keeps track of the Classes that we have validated for final methods. */
 	private static final Map<Class<?>, Boolean> validatedClasses = new WeakHashMap<>();
 
-
-	/** The configuration used to configure this proxy. */
+	// 跟目标类紧密相关的切面信息
 	protected final AdvisedSupport advised;
 
 	@Nullable
@@ -155,16 +156,17 @@ class CglibAopProxy implements AopProxy, Serializable {
 		return getProxy(null);
 	}
 
+	// 真•创建代理
 	@Override
 	public Object getProxy(@Nullable ClassLoader classLoader) {
 		if (logger.isTraceEnabled()) {
 			logger.trace("Creating CGLIB proxy: " + this.advised.getTargetSource());
 		}
-
 		try {
+			// 目标 class
 			Class<?> rootClass = this.advised.getTargetClass();
 			Assert.state(rootClass != null, "Target class must be available for creating a CGLIB proxy");
-
+			// 确认 proxySuperClass
 			Class<?> proxySuperClass = rootClass;
 			if (ClassUtils.isCglibProxyClass(rootClass)) {
 				proxySuperClass = rootClass.getSuperclass();
@@ -173,16 +175,13 @@ class CglibAopProxy implements AopProxy, Serializable {
 					this.advised.addInterface(additionalInterface);
 				}
 			}
-
-			// Validate the class, writing log messages as necessary.
+			// 校验 class 并打印日志
 			validateClassIfNecessary(proxySuperClass, classLoader);
-
-			// Configure CGLIB Enhancer...
+			// 创建并配置 enhancer
 			Enhancer enhancer = createEnhancer();
 			if (classLoader != null) {
 				enhancer.setClassLoader(classLoader);
-				if (classLoader instanceof SmartClassLoader &&
-						((SmartClassLoader) classLoader).isClassReloadable(proxySuperClass)) {
+				if (classLoader instanceof SmartClassLoader && ((SmartClassLoader) classLoader).isClassReloadable(proxySuperClass)) {
 					enhancer.setUseCache(false);
 				}
 			}
@@ -190,17 +189,12 @@ class CglibAopProxy implements AopProxy, Serializable {
 			enhancer.setInterfaces(AopProxyUtils.completeProxiedInterfaces(this.advised));
 			enhancer.setNamingPolicy(SpringNamingPolicy.INSTANCE);
 			enhancer.setStrategy(new ClassLoaderAwareUndeclaredThrowableStrategy(classLoader));
-
+			// TODO 暂不深入下面这段创建代理的过程
 			Callback[] callbacks = getCallbacks(rootClass);
-			Class<?>[] types = new Class<?>[callbacks.length];
-			for (int x = 0; x < types.length; x++) {
-				types[x] = callbacks[x].getClass();
-			}
+			Class<?>[] types = Arrays.stream(callbacks).map(Callback::getClass).toArray(Class<?>[]::new);
 			// fixedInterceptorMap only populated at this point, after getCallbacks call above
-			enhancer.setCallbackFilter(new ProxyCallbackFilter(
-					this.advised.getConfigurationOnlyCopy(), this.fixedInterceptorMap, this.fixedInterceptorOffset));
+			enhancer.setCallbackFilter(new ProxyCallbackFilter(this.advised.getConfigurationOnlyCopy(), this.fixedInterceptorMap, this.fixedInterceptorOffset));
 			enhancer.setCallbackTypes(types);
-
 			// Generate the proxy class and create a proxy instance.
 			return createProxyClassAndInstance(enhancer, callbacks);
 		}
@@ -232,15 +226,13 @@ class CglibAopProxy implements AopProxy, Serializable {
 	}
 
 	/**
-	 * Checks to see whether the supplied {@code Class} has already been validated and
-	 * validates it if not.
+	 * 缓存并校验 class
 	 */
 	private void validateClassIfNecessary(Class<?> proxySuperClass, @Nullable ClassLoader proxyClassLoader) {
 		if (logger.isWarnEnabled()) {
 			synchronized (validatedClasses) {
 				if (!validatedClasses.containsKey(proxySuperClass)) {
-					doValidateClass(proxySuperClass, proxyClassLoader,
-							ClassUtils.getAllInterfacesForClassAsSet(proxySuperClass));
+					doValidateClass(proxySuperClass, proxyClassLoader, getAllInterfacesForClassAsSet(proxySuperClass));
 					validatedClasses.put(proxySuperClass, Boolean.TRUE);
 				}
 			}
@@ -248,8 +240,8 @@ class CglibAopProxy implements AopProxy, Serializable {
 	}
 
 	/**
-	 * Checks for final methods on the given {@code Class}, as well as package-visible
-	 * methods across ClassLoaders, and writes warnings to the log for each one found.
+	 * 真•校验 class
+	 * 如果有 method 有 private、final 等修饰符, 则打印日志
 	 */
 	private void doValidateClass(Class<?> proxySuperClass, @Nullable ClassLoader proxyClassLoader, Set<Class<?>> ifcs) {
 		if (proxySuperClass != Object.class) {

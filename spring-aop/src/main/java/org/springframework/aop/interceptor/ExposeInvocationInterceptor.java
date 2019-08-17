@@ -16,15 +16,14 @@
 
 package org.springframework.aop.interceptor;
 
-import java.io.Serializable;
-
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
-
 import org.springframework.aop.Advisor;
 import org.springframework.aop.support.DefaultPointcutAdvisor;
 import org.springframework.core.NamedThreadLocal;
 import org.springframework.core.PriorityOrdered;
+
+import java.io.Serializable;
 
 /**
  * Interceptor that exposes the current {@link org.aopalliance.intercept.MethodInvocation}
@@ -43,13 +42,8 @@ import org.springframework.core.PriorityOrdered;
 @SuppressWarnings("serial")
 public final class ExposeInvocationInterceptor implements MethodInterceptor, PriorityOrdered, Serializable {
 
-	/** Singleton instance of this class. */
 	public static final ExposeInvocationInterceptor INSTANCE = new ExposeInvocationInterceptor();
 
-	/**
-	 * Singleton advisor for this class. Use in preference to INSTANCE when using
-	 * Spring AOP, as it prevents the need to create a new Advisor to wrap the instance.
-	 */
 	public static final Advisor ADVISOR = new DefaultPointcutAdvisor(INSTANCE) {
 		@Override
 		public String toString() {
@@ -57,34 +51,27 @@ public final class ExposeInvocationInterceptor implements MethodInterceptor, Pri
 		}
 	};
 
-	private static final ThreadLocal<MethodInvocation> invocation =
-			new NamedThreadLocal<>("Current AOP method invocation");
+	private static final ThreadLocal<MethodInvocation> invocation = new NamedThreadLocal<>("Current AOP method invocation");
 
+
+	private ExposeInvocationInterceptor() {
+	}
 
 	/**
-	 * Return the AOP Alliance MethodInvocation object associated with the current invocation.
-	 * @return the invocation object associated with the current invocation
-	 * @throws IllegalStateException if there is no AOP invocation in progress,
-	 * or if the ExposeInvocationInterceptor was not added to this interceptor chain
+	 * 获取当前正在执行的 MethodInvocation
 	 */
 	public static MethodInvocation currentInvocation() throws IllegalStateException {
 		MethodInvocation mi = invocation.get();
 		if (mi == null) {
 			throw new IllegalStateException(
 					"No MethodInvocation found: Check that an AOP invocation is in progress, and that the " +
-					"ExposeInvocationInterceptor is upfront in the interceptor chain. Specifically, note that " +
-					"advices with order HIGHEST_PRECEDENCE will execute before ExposeInvocationInterceptor!");
+							"ExposeInvocationInterceptor is upfront in the interceptor chain. Specifically, note that " +
+							"advices with order HIGHEST_PRECEDENCE will execute before ExposeInvocationInterceptor!");
 		}
 		return mi;
 	}
 
-
-	/**
-	 * Ensures that only the canonical instance can be created.
-	 */
-	private ExposeInvocationInterceptor() {
-	}
-
+	// 将当前正在执行的 MethodInvocation 设置进 TL
 	@Override
 	public Object invoke(MethodInvocation mi) throws Throwable {
 		MethodInvocation oldInvocation = invocation.get();
@@ -103,9 +90,7 @@ public final class ExposeInvocationInterceptor implements MethodInterceptor, Pri
 	}
 
 	/**
-	 * Required to support serialization. Replaces with canonical instance
-	 * on deserialization, protecting Singleton pattern.
-	 * <p>Alternative to overriding the {@code equals} method.
+	 * 支持序列化操作
 	 */
 	private Object readResolve() {
 		return INSTANCE;
