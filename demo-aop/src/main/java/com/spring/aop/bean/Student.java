@@ -22,6 +22,7 @@ public class Student {
         if (random % 2 != 0 ) {
             return String.valueOf(random);
         }
-        throw new RuntimeException("sayHello run time error!");
+        return String.valueOf(random);
+//        throw new RuntimeException("sayHello run time error!");
     }
 }
