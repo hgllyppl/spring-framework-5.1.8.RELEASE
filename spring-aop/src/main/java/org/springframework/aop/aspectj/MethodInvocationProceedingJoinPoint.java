@@ -16,21 +16,21 @@
 
 package org.springframework.aop.aspectj;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-
+import org.aopalliance.intercept.MethodInvocation;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.aspectj.lang.reflect.SourceLocation;
 import org.aspectj.runtime.internal.AroundClosure;
-
 import org.springframework.aop.ProxyMethodInvocation;
 import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.ParameterNameDiscoverer;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 
 /**
  * An implementation of the AspectJ {@link ProceedingJoinPoint} interface
@@ -83,9 +83,11 @@ public class MethodInvocationProceedingJoinPoint implements ProceedingJoinPoint,
 		throw new UnsupportedOperationException();
 	}
 
+	// TODO 为什么要克隆 methodInvocation, 而不是直接调用 proceed
 	@Override
 	public Object proceed() throws Throwable {
-		return this.methodInvocation.invocableClone().proceed();
+		MethodInvocation methodInvocation = this.methodInvocation.invocableClone();
+		return methodInvocation.proceed();
 	}
 
 	@Override

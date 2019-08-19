@@ -16,15 +16,16 @@
 
 package org.springframework.aop.aspectj;
 
-import java.io.Serializable;
-import java.lang.reflect.Method;
-import java.lang.reflect.Type;
-
 import org.springframework.aop.AfterAdvice;
 import org.springframework.aop.AfterReturningAdvice;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
-import org.springframework.util.TypeUtils;
+
+import java.io.Serializable;
+import java.lang.reflect.Method;
+import java.lang.reflect.Type;
+
+import static org.springframework.util.TypeUtils.isAssignable;
 
 /**
  * Spring AOP advice wrapping an AspectJ after-returning advice method.
@@ -62,11 +63,11 @@ public class AspectJAfterReturningAdvice extends AbstractAspectJAdvice
 
 	@Override
 	public void afterReturning(@Nullable Object returnValue, Method method, Object[] args, @Nullable Object target) throws Throwable {
+		// 如果返回值和目标方法的返回类型一样, 则应用 after returning advice
 		if (shouldInvokeOnReturnValueOf(method, returnValue)) {
 			invokeAdviceMethod(getJoinPointMatch(), returnValue, null);
 		}
 	}
-
 
 	/**
 	 * Following AspectJ semantics, if a returning clause was specified, then the
@@ -80,9 +81,8 @@ public class AspectJAfterReturningAdvice extends AbstractAspectJAdvice
 		Class<?> type = getDiscoveredReturningType();
 		Type genericType = getDiscoveredReturningGenericType();
 		// If we aren't dealing with a raw type, check if generic parameters are assignable.
-		return (matchesReturnValue(type, method, returnValue) &&
-				(genericType == null || genericType == type ||
-						TypeUtils.isAssignable(genericType, method.getGenericReturnType())));
+		return (matchesReturnValue(type, method, returnValue)
+				&& (genericType == null || genericType == type || isAssignable(genericType, method.getGenericReturnType())));
 	}
 
 	/**
@@ -106,5 +106,4 @@ public class AspectJAfterReturningAdvice extends AbstractAspectJAdvice
 			return ClassUtils.isAssignable(type, method.getReturnType());
 		}
 	}
-
 }

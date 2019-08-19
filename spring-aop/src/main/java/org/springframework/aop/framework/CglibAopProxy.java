@@ -370,18 +370,16 @@ class CglibAopProxy implements AopProxy, Serializable {
 	@Nullable
 	private static Object processReturnType(
 			Object proxy, @Nullable Object target, Method method, @Nullable Object returnValue) {
-
-		// Massage return value if necessary
-		if (returnValue != null && returnValue == target &&
-				!RawTargetAccess.class.isAssignableFrom(method.getDeclaringClass())) {
+		// Massage return value if necessaryD
+		if (returnValue != null && returnValue == target
+				&& !RawTargetAccess.class.isAssignableFrom(method.getDeclaringClass())) {
 			// Special case: it returned "this". Note that we can't help
 			// if the target sets a reference to itself in another returned object.
 			returnValue = proxy;
 		}
 		Class<?> returnType = method.getReturnType();
 		if (returnValue == null && returnType != Void.TYPE && returnType.isPrimitive()) {
-			throw new AopInvocationException(
-					"Null return value from advice does not match primitive return type for: " + method);
+			throw new AopInvocationException("Null return value from advice does not match primitive return type for: " + method);
 		}
 		return returnValue;
 	}
@@ -655,39 +653,39 @@ class CglibAopProxy implements AopProxy, Serializable {
 			Object target = null;
 			TargetSource targetSource = this.advised.getTargetSource();
 			try {
+				// 设置当前代理到 TL
 				if (this.advised.exposeProxy) {
 					// Make invocation available if necessary.
 					oldProxy = AopContext.setCurrentProxy(proxy);
 					setProxyContext = true;
 				}
-				// Get as late as possible to minimize the time we "own" the target, in case it comes from a pool...
+				// 获取目标类
 				target = targetSource.getTarget();
 				Class<?> targetClass = (target != null ? target.getClass() : null);
+				// 为当前方法选择切面
 				List<Object> chain = this.advised.getInterceptorsAndDynamicInterceptionAdvice(method, targetClass);
 				Object retVal;
-				// Check whether we only have one InvokerInterceptor: that is,
-				// no real advice, but just reflective invocation of the target.
+				// 如果没有切面可选, 则直接调用当前方法
 				if (chain.isEmpty() && Modifier.isPublic(method.getModifiers())) {
-					// We can skip creating a MethodInvocation: just invoke the target directly.
-					// Note that the final invoker must be an InvokerInterceptor, so we know
-					// it does nothing but a reflective operation on the target, and no hot
-					// swapping or fancy proxying.
 					Object[] argsToUse = AopProxyUtils.adaptArgumentsIfNecessary(method, args);
 					retVal = methodProxy.invoke(target, argsToUse);
 				}
+				// 反之, 则构建 MethodInvocation 并调用 proceed 来应用切面
 				else {
-					// We need to create a method invocation...
-					retVal = new CglibMethodInvocation(proxy, target, method, args, targetClass, chain, methodProxy).proceed();
+					CglibMethodInvocation methodInvocation = new CglibMethodInvocation(proxy, target, method, args, targetClass, chain, methodProxy);
+					retVal = methodInvocation.proceed();
 				}
+				// 处理返回值
 				retVal = processReturnType(proxy, target, method, retVal);
 				return retVal;
 			}
 			finally {
+				// 如果需要则释放目标类
 				if (target != null && !targetSource.isStatic()) {
 					targetSource.releaseTarget(target);
 				}
+				// 还原代理点
 				if (setProxyContext) {
-					// Restore old proxy.
 					AopContext.setCurrentProxy(oldProxy);
 				}
 			}
@@ -721,19 +719,29 @@ class CglibAopProxy implements AopProxy, Serializable {
 		public CglibMethodInvocation(Object proxy, @Nullable Object target, Method method,
 				Object[] arguments, @Nullable Class<?> targetClass,
 				List<Object> interceptorsAndDynamicMethodMatchers, MethodProxy methodProxy) {
-
 			super(proxy, target, method, arguments, targetClass, interceptorsAndDynamicMethodMatchers);
-
 			// Only use method proxy for public methods not derived from java.lang.Object
-			this.methodProxy = (Modifier.isPublic(method.getModifiers()) &&
-					method.getDeclaringClass() != Object.class && !AopUtils.isEqualsMethod(method) &&
-					!AopUtils.isHashCodeMethod(method) && !AopUtils.isToStringMethod(method) ?
-					methodProxy : null);
+			boolean userMethodProxy = Modifier.isPublic(method.getModifiers())
+					&& method.getDeclaringClass() != Object.class
+					&& !AopUtils.isEqualsMethod(method)
+					&& !AopUtils.isHashCodeMethod(method)
+					&& !AopUtils.isToStringMethod(method);
+			this.methodProxy = userMethodProxy ? methodProxy : null;
 		}
 
 		/**
-		 * Gives a marginal performance improvement versus using reflection to
-		 * invoke the target when invoking public methods.
+		 * 通过 cglib 调用目标方法 或 通过反射调用目标方法
+		 * TODO 补齐 cglib 代理用例
+		 * cglib 调用目标方法原理: 通过计算目标方法的签名来直接调用调用目标方法
+		 * String signarture = caculateSignarture(method);
+		 * switch (signarture) {
+		 *		case "contains":
+		 * 			((String) target).contains("xx");
+		 * 			break;
+		 * 		case "substring":
+		 * 			((String) target).substring(0);
+		 * }
+		 *
 		 */
 		@Override
 		protected Object invokeJoinpoint() throws Throwable {

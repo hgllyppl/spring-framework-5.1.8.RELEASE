@@ -16,19 +16,18 @@
 
 package org.springframework.aop.framework;
 
+import org.aopalliance.intercept.MethodInterceptor;
+import org.aopalliance.intercept.MethodInvocation;
+import org.springframework.aop.ProxyMethodInvocation;
+import org.springframework.aop.support.AopUtils;
+import org.springframework.core.BridgeMethodResolver;
+import org.springframework.lang.Nullable;
+
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.aopalliance.intercept.MethodInterceptor;
-import org.aopalliance.intercept.MethodInvocation;
-
-import org.springframework.aop.ProxyMethodInvocation;
-import org.springframework.aop.support.AopUtils;
-import org.springframework.core.BridgeMethodResolver;
-import org.springframework.lang.Nullable;
 
 /**
  * Spring's implementation of the AOP Alliance
@@ -61,15 +60,16 @@ import org.springframework.lang.Nullable;
  */
 public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Cloneable {
 
+	// 代理类
 	protected final Object proxy;
-
+	// 目标类
 	@Nullable
 	protected final Object target;
-
+	// 目标方法
 	protected final Method method;
-
+	// 目标方法所需的参数
 	protected Object[] arguments = new Object[0];
-
+	// 目标 class
 	@Nullable
 	private final Class<?> targetClass;
 
@@ -80,17 +80,15 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 	private Map<String, Object> userAttributes;
 
 	/**
-	 * List of MethodInterceptor and InterceptorAndDynamicMethodMatcher
-	 * that need dynamic checks.
+	 * 应用在目标方法上的切面集合
 	 */
 	protected final List<?> interceptorsAndDynamicMethodMatchers;
 
 	/**
-	 * Index from 0 of the current interceptor we're invoking.
-	 * -1 until we invoke: then the current interceptor.
+	 * 当前正在应用的切面 index
+	 * @see #interceptorsAndDynamicMethodMatchers
 	 */
 	private int currentInterceptorIndex = -1;
-
 
 	/**
 	 * Construct a new ReflectiveMethodInvocation with the given arguments.
@@ -117,7 +115,6 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 		this.interceptorsAndDynamicMethodMatchers = interceptorsAndDynamicMethodMatchers;
 	}
 
-
 	@Override
 	public final Object getProxy() {
 		return this.proxy;
@@ -134,11 +131,6 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 		return this.method;
 	}
 
-	/**
-	 * Return the method invoked on the proxied interface.
-	 * May or may not correspond with a method invoked on an underlying
-	 * implementation of that interface.
-	 */
 	@Override
 	public final Method getMethod() {
 		return this.method;
@@ -154,50 +146,43 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 		this.arguments = arguments;
 	}
 
-
 	@Override
 	@Nullable
 	public Object proceed() throws Throwable {
-		//	We start with an index of -1 and increment early.
+		//	如果切面已被调用完毕, 则调用目标方法
 		if (this.currentInterceptorIndex == this.interceptorsAndDynamicMethodMatchers.size() - 1) {
 			return invokeJoinpoint();
 		}
-
-		Object interceptorOrInterceptionAdvice =
-				this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);
+		// 应用切面
+		Object interceptorOrInterceptionAdvice = this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);
+		// 如果是动态切面
 		if (interceptorOrInterceptionAdvice instanceof InterceptorAndDynamicMethodMatcher) {
 			// Evaluate dynamic method matcher here: static part will already have
 			// been evaluated and found to match.
-			InterceptorAndDynamicMethodMatcher dm =
-					(InterceptorAndDynamicMethodMatcher) interceptorOrInterceptionAdvice;
+			InterceptorAndDynamicMethodMatcher dm = (InterceptorAndDynamicMethodMatcher) interceptorOrInterceptionAdvice;
 			Class<?> targetClass = (this.targetClass != null ? this.targetClass : this.method.getDeclaringClass());
+			// 如果切点条件符合, 则应用此动态切面
 			if (dm.methodMatcher.matches(this.method, targetClass, this.arguments)) {
 				return dm.interceptor.invoke(this);
 			}
+			// 如果条件不符合, 则应用下一个切面
 			else {
-				// Dynamic matching failed.
-				// Skip this interceptor and invoke the next in the chain.
 				return proceed();
 			}
 		}
+		// 反之, 则直接应用切面
 		else {
-			// It's an interceptor, so we just invoke it: The pointcut will have
-			// been evaluated statically before this object was constructed.
 			return ((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this);
 		}
 	}
 
 	/**
-	 * Invoke the joinpoint using reflection.
-	 * Subclasses can override this to use custom invocation.
-	 * @return the return value of the joinpoint
-	 * @throws Throwable if invoking the joinpoint resulted in an exception
+	 * 反射调用目标方法
 	 */
 	@Nullable
 	protected Object invokeJoinpoint() throws Throwable {
 		return AopUtils.invokeJoinpointUsingReflection(this.target, this.method, this.arguments);
 	}
-
 
 	/**
 	 * This implementation returns a shallow copy of this invocation object,
@@ -282,7 +267,6 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 		return this.userAttributes;
 	}
 
-
 	@Override
 	public String toString() {
 		// Don't do toString on target, it may be proxied.
@@ -296,5 +280,4 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 		}
 		return sb.toString();
 	}
-
 }
