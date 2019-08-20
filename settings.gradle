@@ -1,5 +1,10 @@
 include 'demo-aop'
 include 'demo-ioc'
+include 'demo-jdbc'
+include 'demo-mvc-servlet2'
+include 'demo-mvc-servlet3'
+include 'demo-orm'
+include 'demo-schedule'
 include "spring-aop"
 include "spring-aspects"
 include "spring-beans"
@@ -31,4 +36,3 @@ rootProject.name = "spring"
 rootProject.children.each {project ->
 	project.buildFileName = "${project.name}.gradle"
 }
-

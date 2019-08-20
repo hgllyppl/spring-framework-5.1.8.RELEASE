@@ -1,0 +1,11 @@
+
+datasource:
+  url: jdbc:mysql://127.0.0.1:3306/edu?useUnicode=true&characterEncoding=utf-8&useSSL=false
+  driver: com.mysql.cj.jdbc.Driver
+  username: root
+  password: 12345678
+
+mybatis:
+  auto-mapping-behavior: full
+  map-underscore-to-camel-case: true
+  default-statement-timeout: 30
