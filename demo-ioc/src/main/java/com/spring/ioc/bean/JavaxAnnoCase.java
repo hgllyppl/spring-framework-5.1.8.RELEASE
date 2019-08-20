@@ -1,5 +1,7 @@
 package com.spring.ioc.bean;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.annotation.CommonAnnotationBeanPostProcessor;
@@ -13,6 +15,8 @@ import javax.annotation.Resource;
  * @see CommonAnnotationBeanPostProcessor
  */
 public class JavaxAnnoCase {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(JavaxAnnoCase.class);
 
     // 还可以动态替换资源名称, NBility
     @Resource(name = "${viewProperty}")
@@ -30,7 +34,7 @@ public class JavaxAnnoCase {
      */
     @PostConstruct
     public void init() {
-        System.out.println("JavaxAnnoCase inited");
+        LOGGER.info("inited");
     }
 
     /**
@@ -39,6 +43,6 @@ public class JavaxAnnoCase {
      */
     @PreDestroy
     public void close() {
-        System.out.println("JavaxAnnoCase closed");
+        LOGGER.info("closed");
     }
 }

@@ -1,5 +1,7 @@
 package com.spring.ioc.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.core.type.AnnotationMetadata;
@@ -9,8 +11,10 @@ import org.springframework.core.type.AnnotationMetadata;
  */
 public class ImportBeanDefConfig implements ImportBeanDefinitionRegistrar {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ImportBeanDefConfig.class);
+
     @Override
     public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
-        System.out.println("ImportBeanDefConfig invoked");
+        LOGGER.info("invoked");
     }
 }

@@ -1,5 +1,7 @@
 package com.spring.ioc.bean;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
@@ -8,19 +10,22 @@ import org.springframework.context.event.EventListener;
  * Created by xin on 2019/7/18.
  */
 public class StartListener implements ApplicationListener<ContextRefreshedEvent> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(StartListener.class);
+
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
-        System.out.println("StartListener ContextRefreshedEvent");
+        LOGGER.info("ContextRefreshedEvent");
     }
 
     @EventListener
     public String eventListener(ContextRefreshedEvent event) {
-        System.out.println("StartListener ContextRefreshedEvent");
+        LOGGER.info("ContextRefreshedEvent");
         return "success";
     }
 
     @EventListener
-    public void eventListener2(String msg) {
-        System.out.println("StartListener handle " + msg);
+    public void handleEventResult(String msg) {
+        LOGGER.info(msg);
     }
 }

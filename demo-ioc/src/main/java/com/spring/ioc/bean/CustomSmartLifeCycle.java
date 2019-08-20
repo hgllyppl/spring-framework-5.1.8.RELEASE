@@ -1,5 +1,7 @@
 package com.spring.ioc.bean;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.SmartLifecycle;
 
 /**
@@ -7,18 +9,20 @@ import org.springframework.context.SmartLifecycle;
  */
 public class CustomSmartLifeCycle implements SmartLifecycle {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(CustomSmartLifeCycle.class);
+
     private volatile boolean running = false;
 
     @Override
     public void start() {
         running = true;
-        System.out.println("CustomSmartLifeCycle start");
+        LOGGER.info("start");
     }
 
     @Override
     public void stop() {
         running = false;
-        System.out.println("CustomSmartLifeCycle stop");
+        LOGGER.info("stop");
     }
 
     @Override

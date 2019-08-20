@@ -5,4 +5,5 @@ dependencies {
     compile("org.slf4j:jcl-over-slf4j:1.7.26")
     compile("org.apache.tomcat.embed:tomcat-embed-jasper:8.5.43")
     compile("com.google.guava:guava:22.0")
+    compile("com.fasterxml.jackson.core:jackson-databind:2.9.9")
 }

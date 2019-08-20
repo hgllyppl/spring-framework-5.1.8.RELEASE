@@ -1,7 +1,10 @@
 package com.spring.ioc.config;
 
 import com.spring.ioc.anno.EnableApplicationListener;
+import com.spring.ioc.bean.BeanLifeCycle;
 import com.spring.ioc.bean.StartListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.ConfigurationClassPostProcessor;
@@ -19,6 +22,8 @@ import java.util.Map;
 @Configuration
 public class ApplicationListenerConfig implements ImportAware {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ApplicationListenerConfig.class);
+
     @Bean
     public StartListener startListener() {
         return new StartListener();
@@ -28,6 +33,6 @@ public class ApplicationListenerConfig implements ImportAware {
     public void setImportMetadata(AnnotationMetadata importMetadata) {
         Map<String, Object> map = importMetadata.getAnnotationAttributes(EnableApplicationListener.class.getName());
         AnnotationAttributes attrs = AnnotationAttributes.fromMap(map);
-        System.out.println(attrs.getString("condition"));
+        LOGGER.info(attrs.getString("condition"));
     }
 }

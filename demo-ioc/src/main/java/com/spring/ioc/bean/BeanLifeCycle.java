@@ -1,5 +1,7 @@
 package com.spring.ioc.bean;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 
@@ -11,14 +13,16 @@ import javax.annotation.PreDestroy;
  */
 public class BeanLifeCycle implements InitializingBean, DisposableBean {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(BeanLifeCycle.class);
+
     @PostConstruct
     public void init() {
-        System.out.println("BeanLifeCycle inited");
+        LOGGER.info("inited");
     }
 
     @PreDestroy
     public void close() {
-        System.out.println("BeanLifeCycle closed");
+        LOGGER.info("closed");
     }
 
     @Override
