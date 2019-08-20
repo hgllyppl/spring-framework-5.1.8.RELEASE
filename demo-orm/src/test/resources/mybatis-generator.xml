@@ -11,10 +11,10 @@
             <property name="suppressAllComments" value="true"/>
         </commentGenerator>
 
-        <jdbcConnection driverClass="${mybatis.generator.driverClass}"
-                        connectionURL="${mybatis.generator.connectionURL}"
-                        userId="${mybatis.generator.userId}"
-                        password="${mybatis.generator.password}"
+        <jdbcConnection driverClass="com.mysql.cj.jdbc.Driver"
+                        connectionURL="jdbc:mysql://127.0.0.1:3306/edu?useUnicode=true&amp;characterEncoding=utf-8&amp;useSSL=false"
+                        userId="root"
+                        password="12345678"
         />
 
         <javaTypeResolver>
