@@ -94,7 +94,7 @@ configure(allprojects) { project ->
 
 	compileJava.options*.compilerArgs = commonCompilerArgs +
 			["-Xlint:varargs", "-Xlint:fallthrough", "-Xlint:rawtypes",
-			 "-Xlint:deprecation", "-Xlint:unchecked", "-Werror"]
+			 "-Xlint:deprecation", "-Xlint:unchecked"]
 
 	compileTestJava.options*.compilerArgs = commonCompilerArgs +
 			["-Xlint:-varargs", "-Xlint:-fallthrough", "-Xlint:-rawtypes",
@@ -237,14 +237,14 @@ configure(subprojects - project(":spring-build-src")) { subproject ->
 		// Don't include or exclude anything explicitly by default. See SPR-12085.
 	}
 
-	task javadocJar(type: Jar) {
-		classifier = "javadoc"
-		from javadoc
-	}
+//	task javadocJar(type: Jar) {
+//		classifier = "javadoc"
+//		from javadoc
+//	}
 
 	artifacts {
 		archives sourcesJar
-		archives javadocJar
+//		archives javadocJar
 	}
 }
 

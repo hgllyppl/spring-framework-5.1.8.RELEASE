@@ -269,8 +269,7 @@ class ConfigurationClassParser {
 		}
 		// 2、处理 @PropertySource
 		// 读取 PropertySource, 并将其加入 environment
-		Class propertySourceClass = org.springframework.context.annotation.PropertySource.class;
-		Set<AnnotationAttributes> propertySources = attributesForRepeatable(sourceClass.getMetadata(), PropertySources.class, propertySourceClass);
+		Set<AnnotationAttributes> propertySources = attributesForRepeatable(sourceClass.getMetadata(), PropertySources.class, org.springframework.context.annotation.PropertySource.class);
 		// 遍历 PropertySource 并加入 environment
 		for (AnnotationAttributes propertySource : propertySources) {
 			if (this.environment instanceof ConfigurableEnvironment) {
