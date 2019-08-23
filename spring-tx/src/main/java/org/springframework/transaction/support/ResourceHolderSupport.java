@@ -35,13 +35,25 @@ import org.springframework.transaction.TransactionTimedOutException;
  */
 public abstract class ResourceHolderSupport implements ResourceHolder {
 
+	/**
+	 * synchronizedWithTransaction, 在 txObject.setConnectionHolder 后设置此属性
+	 * @see org.springframework.jdbc.datasource.DataSourceTransactionManager#doBegin
+	 */
 	private boolean synchronizedWithTransaction = false;
 
 	private boolean rollbackOnly = false;
 
+	/**
+	 * SQL 超时时间, 在 txObject.setConnectionHolder 后设置此属性
+	 * @see org.springframework.jdbc.datasource.DataSourceTransactionManager#doBegin
+	 * @see org.springframework.jdbc.datasource.DataSourceUtils#applyTransactionTimeout
+	 */
 	@Nullable
 	private Date deadline;
-
+	/**
+	 * 资源被使用的次数
+	 * @see #requested()
+	 */
 	private int referenceCount = 0;
 
 	private boolean isVoid = false;
@@ -165,8 +177,7 @@ public abstract class ResourceHolderSupport implements ResourceHolder {
 	}
 
 	/**
-	 * Decrease the reference count by one because the holder has been released
-	 * (i.e. someone released the resource held by it).
+	 * 将计数器减一
 	 */
 	public void released() {
 		this.referenceCount--;

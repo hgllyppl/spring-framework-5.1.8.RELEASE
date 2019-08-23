@@ -16,11 +16,6 @@
 
 package org.springframework.transaction.annotation;
 
-import java.io.Serializable;
-import java.lang.reflect.AnnotatedElement;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -29,6 +24,11 @@ import org.springframework.transaction.interceptor.NoRollbackRuleAttribute;
 import org.springframework.transaction.interceptor.RollbackRuleAttribute;
 import org.springframework.transaction.interceptor.RuleBasedTransactionAttribute;
 import org.springframework.transaction.interceptor.TransactionAttribute;
+
+import java.io.Serializable;
+import java.lang.reflect.AnnotatedElement;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Strategy implementation for parsing Spring's {@link Transactional} annotation.
@@ -39,11 +39,13 @@ import org.springframework.transaction.interceptor.TransactionAttribute;
 @SuppressWarnings("serial")
 public class SpringTransactionAnnotationParser implements TransactionAnnotationParser, Serializable {
 
+	// 真•查找 @Transactional 并解析成 TransactionAttribute
 	@Override
 	@Nullable
 	public TransactionAttribute parseTransactionAnnotation(AnnotatedElement element) {
-		AnnotationAttributes attributes = AnnotatedElementUtils.findMergedAnnotationAttributes(
-				element, Transactional.class, false, false);
+		// 查找 @Transactional
+		AnnotationAttributes attributes = AnnotatedElementUtils.findMergedAnnotationAttributes(element, Transactional.class, false, false);
+		// 解析 @Transactional
 		if (attributes != null) {
 			return parseTransactionAnnotation(attributes);
 		}
@@ -58,15 +60,13 @@ public class SpringTransactionAnnotationParser implements TransactionAnnotationP
 
 	protected TransactionAttribute parseTransactionAnnotation(AnnotationAttributes attributes) {
 		RuleBasedTransactionAttribute rbta = new RuleBasedTransactionAttribute();
-
-		Propagation propagation = attributes.getEnum("propagation");
-		rbta.setPropagationBehavior(propagation.value());
-		Isolation isolation = attributes.getEnum("isolation");
-		rbta.setIsolationLevel(isolation.value());
+		// 读取注解信息
+		rbta.setPropagationBehavior(attributes.<Propagation>getEnum("propagation").value());
+		rbta.setIsolationLevel(attributes.<Isolation>getEnum("isolation").value());
 		rbta.setTimeout(attributes.getNumber("timeout").intValue());
 		rbta.setReadOnly(attributes.getBoolean("readOnly"));
 		rbta.setQualifier(attributes.getString("value"));
-
+		// 读取 rollback 规则
 		List<RollbackRuleAttribute> rollbackRules = new ArrayList<>();
 		for (Class<?> rbRule : attributes.getClassArray("rollbackFor")) {
 			rollbackRules.add(new RollbackRuleAttribute(rbRule));
@@ -81,7 +81,7 @@ public class SpringTransactionAnnotationParser implements TransactionAnnotationP
 			rollbackRules.add(new NoRollbackRuleAttribute(rbRule));
 		}
 		rbta.setRollbackRules(rollbackRules);
-
+		// 返回
 		return rbta;
 	}
 

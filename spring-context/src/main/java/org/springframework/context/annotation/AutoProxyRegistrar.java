@@ -16,15 +16,14 @@
 
 package org.springframework.context.annotation;
 
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.config.AopConfigUtils;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.core.type.AnnotationMetadata;
+
+import java.util.Set;
 
 /**
  * Registers an auto proxy creator against the current {@link BeanDefinitionRegistry}
@@ -40,23 +39,12 @@ public class AutoProxyRegistrar implements ImportBeanDefinitionRegistrar {
 	private final Log logger = LogFactory.getLog(getClass());
 
 	/**
-	 * Register, escalate, and configure the standard auto proxy creator (APC) against the
-	 * given registry. Works by finding the nearest annotation declared on the importing
-	 * {@code @Configuration} class that has both {@code mode} and {@code proxyTargetClass}
-	 * attributes. If {@code mode} is set to {@code PROXY}, the APC is registered; if
-	 * {@code proxyTargetClass} is set to {@code true}, then the APC is forced to use
-	 * subclass (CGLIB) proxying.
-	 * <p>Several {@code @Enable*} annotations expose both {@code mode} and
-	 * {@code proxyTargetClass} attributes. It is important to note that most of these
-	 * capabilities end up sharing a {@linkplain AopConfigUtils#AUTO_PROXY_CREATOR_BEAN_NAME
-	 * single APC}. For this reason, this implementation doesn't "care" exactly which
-	 * annotation it finds -- as long as it exposes the right {@code mode} and
-	 * {@code proxyTargetClass} attributes, the APC can be registered and configured all
-	 * the same.
+	 * 注册代理生成器
 	 */
 	@Override
 	public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
 		boolean candidateFound = false;
+		// 迭代注解并查找 @EnableTransactionManagement
 		Set<String> annTypes = importingClassMetadata.getAnnotationTypes();
 		for (String annType : annTypes) {
 			AnnotationAttributes candidate = AnnotationConfigUtils.attributesFor(importingClassMetadata, annType);
@@ -65,11 +53,13 @@ public class AutoProxyRegistrar implements ImportBeanDefinitionRegistrar {
 			}
 			Object mode = candidate.get("mode");
 			Object proxyTargetClass = candidate.get("proxyTargetClass");
-			if (mode != null && proxyTargetClass != null && AdviceMode.class == mode.getClass() &&
-					Boolean.class == proxyTargetClass.getClass()) {
+			// 如果找到 @EnableTransactionManagement
+			if (mode != null && proxyTargetClass != null && AdviceMode.class == mode.getClass() && Boolean.class == proxyTargetClass.getClass()) {
 				candidateFound = true;
 				if (mode == AdviceMode.PROXY) {
+					// 注册 InfrastructureAdvisorAutoProxyCreator
 					AopConfigUtils.registerAutoProxyCreatorIfNecessary(registry);
+					// 是否启用 cglib 代理
 					if ((Boolean) proxyTargetClass) {
 						AopConfigUtils.forceAutoProxyCreatorToUseClassProxying(registry);
 						return;
@@ -77,6 +67,7 @@ public class AutoProxyRegistrar implements ImportBeanDefinitionRegistrar {
 				}
 			}
 		}
+		// 打印日志
 		if (!candidateFound && logger.isInfoEnabled()) {
 			String name = getClass().getSimpleName();
 			logger.info(String.format("%s was imported but no annotations were found " +

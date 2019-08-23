@@ -19,6 +19,8 @@ package org.springframework.transaction.support;
 import org.springframework.lang.Nullable;
 import org.springframework.transaction.NestedTransactionNotSupportedException;
 import org.springframework.transaction.SavepointManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.AbstractPlatformTransactionManager.SuspendedResourcesHolder;
 import org.springframework.util.Assert;
 
 /**
@@ -50,17 +52,27 @@ import org.springframework.util.Assert;
  */
 public class DefaultTransactionStatus extends AbstractTransactionStatus {
 
+	/**
+	 * 当前事务持有的资源
+	 * @see org.springframework.jdbc.datasource.JdbcTransactionObjectSupport
+	 */
 	@Nullable
 	private final Object transaction;
-
+	// 是否新事务
 	private final boolean newTransaction;
-
+	/**
+	 * @see #isNewSynchronization()
+	 * @see AbstractPlatformTransactionManager#newTransactionStatus
+	 */
 	private final boolean newSynchronization;
-
+	// 事务是否只读
 	private final boolean readOnly;
-
+	// 日志是否 debug 级别
 	private final boolean debug;
-
+	/**
+	 * 被挂起的事务资源
+	 * @see SuspendedResourcesHolder
+	 */
 	@Nullable
 	private final Object suspendedResources;
 
@@ -178,10 +190,9 @@ public class DefaultTransactionStatus extends AbstractTransactionStatus {
 	}
 
 	/**
-	 * This implementation exposes the {@link SavepointManager} interface
-	 * of the underlying transaction object, if any.
-	 * @throws NestedTransactionNotSupportedException if savepoints are not supported
-	 * @see #isTransactionSavepointManager()
+	 * 获取 SavepointManager
+	 * 如果 transaction 不是 SavepointManager, 将抛出异常
+	 * @see org.springframework.jdbc.datasource.JdbcTransactionObjectSupport
 	 */
 	@Override
 	protected SavepointManager getSavepointManager() {

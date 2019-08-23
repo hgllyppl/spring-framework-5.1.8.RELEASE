@@ -16,13 +16,13 @@
 
 package org.springframework.jdbc.datasource;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Savepoint;
-
 import org.springframework.lang.Nullable;
 import org.springframework.transaction.support.ResourceHolderSupport;
 import org.springframework.util.Assert;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Savepoint;
 
 /**
  * Resource holder wrapping a JDBC {@link Connection}.
@@ -41,23 +41,29 @@ import org.springframework.util.Assert;
  */
 public class ConnectionHolder extends ResourceHolderSupport {
 
-	/**
-	 * Prefix for savepoint names.
-	 */
 	public static final String SAVEPOINT_NAME_PREFIX = "SAVEPOINT_";
 
-
+	// ConnectionHandle
 	@Nullable
 	private ConnectionHandle connectionHandle;
-
+	// 绑定在此对象上的 conn
 	@Nullable
 	private Connection currentConnection;
-
+	/**
+	 * 是否已激活事务, 在 txObject.setConnectionHolder 后设置此属性
+	 * @see org.springframework.jdbc.datasource.DataSourceTransactionManager#doBegin
+	 */
 	private boolean transactionActive = false;
-
+	/**
+	 * 当前 conn 是否支持 savepoint
+	 * @see #supportsSavepoints()
+ 	 */
 	@Nullable
 	private Boolean savepointsSupported;
-
+	/**
+	 * 当前 conn 的 savepoint 计数
+	 * @see #createSavepoint()
+	 */
 	private int savepointCounter = 0;
 
 
@@ -177,10 +183,8 @@ public class ConnectionHolder extends ResourceHolderSupport {
 	}
 
 	/**
-	 * Create a new JDBC 3.0 Savepoint for the current Connection,
-	 * using generated savepoint names that are unique for the Connection.
-	 * @return the new Savepoint
-	 * @throws SQLException if thrown by the JDBC driver
+	 * 真•创建 savepoint
+	 * @see Connection#setSavepoint
 	 */
 	public Savepoint createSavepoint() throws SQLException {
 		this.savepointCounter++;
@@ -188,7 +192,7 @@ public class ConnectionHolder extends ResourceHolderSupport {
 	}
 
 	/**
-	 * Releases the current Connection held by this ConnectionHolder.
+	 * 释放资源, 仅仅将计数器减一
 	 * <p>This is necessary for ConnectionHandles that expect "Connection borrowing",
 	 * where each returned Connection is only temporarily leased and needs to be
 	 * returned once the data operation is done, to make the Connection available
@@ -199,12 +203,14 @@ public class ConnectionHolder extends ResourceHolderSupport {
 		super.released();
 		if (!isOpen() && this.currentConnection != null) {
 			if (this.connectionHandle != null) {
+				/**
+				 * @see ConnectionHandle
+				 */
 				this.connectionHandle.releaseConnection(this.currentConnection);
 			}
 			this.currentConnection = null;
 		}
 	}
-
 
 	@Override
 	public void clear() {

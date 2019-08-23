@@ -16,20 +16,19 @@
 
 package org.springframework.jdbc.datasource;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
-import javax.sql.DataSource;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.jdbc.CannotGetJdbcConnectionException;
 import org.springframework.lang.Nullable;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronizationAdapter;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.Assert;
+
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 /**
  * Helper class that provides static methods for obtaining JDBC Connections from
@@ -162,20 +161,14 @@ public abstract class DataSourceUtils {
 	}
 
 	/**
-	 * Prepare the given Connection with the given transaction semantics.
-	 * @param con the Connection to prepare
-	 * @param definition the transaction definition to apply
-	 * @return the previous isolation level, if any
-	 * @throws SQLException if thrown by JDBC methods
+	 * 根据给定 TransactionDefinition 设置 conn 的隔离级别以及是否只读
 	 * @see #resetConnectionAfterTransaction
 	 */
 	@Nullable
 	public static Integer prepareConnectionForTransaction(Connection con, @Nullable TransactionDefinition definition)
 			throws SQLException {
-
 		Assert.notNull(con, "No Connection specified");
-
-		// Set read-only flag.
+		// 设置是否只读
 		if (definition != null && definition.isReadOnly()) {
 			try {
 				if (logger.isDebugEnabled()) {
@@ -196,8 +189,7 @@ public abstract class DataSourceUtils {
 				logger.debug("Could not set JDBC Connection read-only", ex);
 			}
 		}
-
-		// Apply specific isolation level, if any.
+		// 设置隔离级别
 		Integer previousIsolationLevel = null;
 		if (definition != null && definition.getIsolationLevel() != TransactionDefinition.ISOLATION_DEFAULT) {
 			if (logger.isDebugEnabled()) {
@@ -210,7 +202,7 @@ public abstract class DataSourceUtils {
 				con.setTransactionIsolation(definition.getIsolationLevel());
 			}
 		}
-
+		// 返回之前的隔离级别
 		return previousIsolationLevel;
 	}
 
@@ -224,7 +216,7 @@ public abstract class DataSourceUtils {
 	public static void resetConnectionAfterTransaction(Connection con, @Nullable Integer previousIsolationLevel) {
 		Assert.notNull(con, "No Connection specified");
 		try {
-			// Reset transaction isolation to previous value, if changed for the transaction.
+			// 还原隔离级别
 			if (previousIsolationLevel != null) {
 				if (logger.isDebugEnabled()) {
 					logger.debug("Resetting isolation level of JDBC Connection [" +
@@ -232,8 +224,7 @@ public abstract class DataSourceUtils {
 				}
 				con.setTransactionIsolation(previousIsolationLevel);
 			}
-
-			// Reset read-only flag.
+			// 还原只读属性
 			if (con.isReadOnly()) {
 				if (logger.isDebugEnabled()) {
 					logger.debug("Resetting read-only flag of JDBC Connection [" + con + "]");
@@ -300,13 +291,7 @@ public abstract class DataSourceUtils {
 	}
 
 	/**
-	 * Close the given Connection, obtained from the given DataSource,
-	 * if it is not managed externally (that is, not bound to the thread).
-	 * @param con the Connection to close if necessary
-	 * (if this is {@code null}, the call will be ignored)
-	 * @param dataSource the DataSource that the Connection was obtained from
-	 * (may be {@code null})
-	 * @see #getConnection
+	 * 释放资源
 	 */
 	public static void releaseConnection(@Nullable Connection con, @Nullable DataSource dataSource) {
 		try {
@@ -321,38 +306,28 @@ public abstract class DataSourceUtils {
 	}
 
 	/**
-	 * Actually close the given Connection, obtained from the given DataSource.
-	 * Same as {@link #releaseConnection}, but throwing the original SQLException.
-	 * <p>Directly accessed by {@link TransactionAwareDataSourceProxy}.
-	 * @param con the Connection to close if necessary
-	 * (if this is {@code null}, the call will be ignored)
-	 * @param dataSource the DataSource that the Connection was obtained from
-	 * (may be {@code null})
-	 * @throws SQLException if thrown by JDBC methods
-	 * @see #doGetConnection
+	 * 真•释放资源
 	 */
 	public static void doReleaseConnection(@Nullable Connection con, @Nullable DataSource dataSource) throws SQLException {
 		if (con == null) {
 			return;
 		}
 		if (dataSource != null) {
+			// 如果绑定的资源和给定的资源相同
 			ConnectionHolder conHolder = (ConnectionHolder) TransactionSynchronizationManager.getResource(dataSource);
 			if (conHolder != null && connectionEquals(conHolder, con)) {
-				// It's the transactional Connection: Don't close it.
+				// 则释放绑定的资源
+				// 资源计数器减一
 				conHolder.released();
 				return;
 			}
 		}
+		// 以上条件不满足, 则直接释放资源
 		doCloseConnection(con, dataSource);
 	}
 
 	/**
-	 * Close the Connection, unless a {@link SmartDataSource} doesn't want us to.
-	 * @param con the Connection to close if necessary
-	 * @param dataSource the DataSource that the Connection was obtained from
-	 * @throws SQLException if thrown by JDBC methods
-	 * @see Connection#close()
-	 * @see SmartDataSource#shouldClose(Connection)
+	 * 关闭资源
 	 */
 	public static void doCloseConnection(Connection con, @Nullable DataSource dataSource) throws SQLException {
 		if (!(dataSource instanceof SmartDataSource) || ((SmartDataSource) dataSource).shouldClose(con)) {
@@ -361,13 +336,7 @@ public abstract class DataSourceUtils {
 	}
 
 	/**
-	 * Determine whether the given two Connections are equal, asking the target
-	 * Connection in case of a proxy. Used to detect equality even if the
-	 * user passed in a raw target Connection while the held one is a proxy.
-	 * @param conHolder the ConnectionHolder for the held Connection (potentially a proxy)
-	 * @param passedInCon the Connection passed-in by the user
-	 * (potentially a target Connection without proxy)
-	 * @return whether the given Connections are equal
+	 * 判断给定的 conHolder.conn 和 conn 和 是否相同
 	 * @see #getTargetConnection
 	 */
 	private static boolean connectionEquals(ConnectionHolder conHolder, Connection passedInCon) {
@@ -375,10 +344,7 @@ public abstract class DataSourceUtils {
 			return false;
 		}
 		Connection heldCon = conHolder.getConnection();
-		// Explicitly check for identity too: for Connection handles that do not implement
-		// "equals" properly, such as the ones Commons DBCP exposes).
-		return (heldCon == passedInCon || heldCon.equals(passedInCon) ||
-				getTargetConnection(heldCon).equals(passedInCon));
+		return heldCon == passedInCon || heldCon.equals(passedInCon) || getTargetConnection(heldCon).equals(passedInCon);
 	}
 
 	/**

@@ -16,6 +16,12 @@
 
 package org.springframework.transaction.annotation;
 
+import org.springframework.lang.Nullable;
+import org.springframework.transaction.interceptor.AbstractFallbackTransactionAttributeSource;
+import org.springframework.transaction.interceptor.TransactionAttribute;
+import org.springframework.util.Assert;
+import org.springframework.util.ClassUtils;
+
 import java.io.Serializable;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
@@ -23,12 +29,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
-
-import org.springframework.lang.Nullable;
-import org.springframework.transaction.interceptor.AbstractFallbackTransactionAttributeSource;
-import org.springframework.transaction.interceptor.TransactionAttribute;
-import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
 
 /**
  * Implementation of the
@@ -143,6 +143,9 @@ public class AnnotationTransactionAttributeSource extends AbstractFallbackTransa
 		return determineTransactionAttribute(clazz);
 	}
 
+	/**
+	 * 查找 @Transactional 并解析成 TransactionAttribute
+	 */
 	@Override
 	@Nullable
 	protected TransactionAttribute findTransactionAttribute(Method method) {
@@ -150,14 +153,7 @@ public class AnnotationTransactionAttributeSource extends AbstractFallbackTransa
 	}
 
 	/**
-	 * Determine the transaction attribute for the given method or class.
-	 * <p>This implementation delegates to configured
-	 * {@link TransactionAnnotationParser TransactionAnnotationParsers}
-	 * for parsing known annotations into Spring's metadata attribute class.
-	 * Returns {@code null} if it's not transactional.
-	 * <p>Can be overridden to support custom annotations that carry transaction metadata.
-	 * @param element the annotated method or class
-	 * @return the configured transaction attribute, or {@code null} if none was found
+	 * 查找 @Transactional 并解析成 TransactionAttribute
 	 */
 	@Nullable
 	protected TransactionAttribute determineTransactionAttribute(AnnotatedElement element) {

@@ -47,9 +47,13 @@ import org.springframework.transaction.TransactionUsageException;
 public abstract class AbstractTransactionStatus implements TransactionStatus {
 
 	private boolean rollbackOnly = false;
-
+	// 当前事务是否已执行完毕
 	private boolean completed = false;
-
+	/**
+	 * 事务保存点
+	 * @see #createAndHoldSavepoint()
+	 * @see JdbcTransactionObjectSupport
+	 */
 	@Nullable
 	private Object savepoint;
 
@@ -139,17 +143,15 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 	}
 
 	/**
-	 * Create a savepoint and hold it for the transaction.
-	 * @throws org.springframework.transaction.NestedTransactionNotSupportedException
-	 * if the underlying transaction does not support savepoints
+	 * 创建 savepoint
 	 */
 	public void createAndHoldSavepoint() throws TransactionException {
-		setSavepoint(getSavepointManager().createSavepoint());
+		Object savepoint = getSavepointManager().createSavepoint();
+		setSavepoint(savepoint);
 	}
 
 	/**
-	 * Roll back to the savepoint that is held for the transaction
-	 * and release the savepoint right afterwards.
+	 * 回滚并释放 savepoint
 	 */
 	public void rollbackToHeldSavepoint() throws TransactionException {
 		Object savepoint = getSavepoint();
@@ -163,7 +165,7 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 	}
 
 	/**
-	 * Release the savepoint that is held for the transaction.
+	 * 释放 savepoint
 	 */
 	public void releaseHeldSavepoint() throws TransactionException {
 		Object savepoint = getSavepoint();
@@ -214,10 +216,7 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 	}
 
 	/**
-	 * Return a SavepointManager for the underlying transaction, if possible.
-	 * <p>Default implementation always throws a NestedTransactionNotSupportedException.
-	 * @throws org.springframework.transaction.NestedTransactionNotSupportedException
-	 * if the underlying transaction does not support savepoints
+	 * @see DefaultTransactionStatus#getSavepointManager()
 	 */
 	protected SavepointManager getSavepointManager() {
 		throw new NestedTransactionNotSupportedException("This transaction does not support savepoints");

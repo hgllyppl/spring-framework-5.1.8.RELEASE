@@ -16,12 +16,8 @@
 
 package org.springframework.jdbc.datasource;
 
-import java.sql.SQLException;
-import java.sql.Savepoint;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.lang.Nullable;
 import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.transaction.NestedTransactionNotSupportedException;
@@ -31,6 +27,9 @@ import org.springframework.transaction.TransactionSystemException;
 import org.springframework.transaction.TransactionUsageException;
 import org.springframework.transaction.support.SmartTransactionObject;
 import org.springframework.util.Assert;
+
+import java.sql.SQLException;
+import java.sql.Savepoint;
 
 /**
  * Convenient base class for JDBC-aware transaction objects. Can contain a
@@ -50,15 +49,14 @@ public abstract class JdbcTransactionObjectSupport implements SavepointManager, 
 
 	private static final Log logger = LogFactory.getLog(JdbcTransactionObjectSupport.class);
 
-
+	// ConnectionHolder
 	@Nullable
 	private ConnectionHolder connectionHolder;
-
+	// 旧的 IsolationLevel
 	@Nullable
 	private Integer previousIsolationLevel;
-
+	// 是否允许 savepoint
 	private boolean savepointAllowed = false;
-
 
 	public void setConnectionHolder(@Nullable ConnectionHolder connectionHolder) {
 		this.connectionHolder = connectionHolder;
@@ -101,8 +99,8 @@ public abstract class JdbcTransactionObjectSupport implements SavepointManager, 
 	//---------------------------------------------------------------------
 
 	/**
-	 * This implementation creates a JDBC 3.0 Savepoint and returns it.
-	 * @see java.sql.Connection#setSavepoint
+	 * 创建 savepoint
+	 * 如果 conn 不支持 savepoint, 将抛出异常
 	 */
 	@Override
 	public Object createSavepoint() throws TransactionException {
@@ -154,6 +152,8 @@ public abstract class JdbcTransactionObjectSupport implements SavepointManager, 
 		}
 	}
 
+	// 获取 connectionHolder
+	// 如果不允许 savepoint 或 connectionHolder = null, 将抛出异常
 	protected ConnectionHolder getConnectionHolderForSavepoint() throws TransactionException {
 		if (!isSavepointAllowed()) {
 			throw new NestedTransactionNotSupportedException(

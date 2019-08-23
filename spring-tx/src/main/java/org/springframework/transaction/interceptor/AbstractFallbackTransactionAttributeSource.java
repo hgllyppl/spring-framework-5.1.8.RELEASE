@@ -16,18 +16,17 @@
 
 package org.springframework.transaction.interceptor;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.support.AopUtils;
 import org.springframework.core.MethodClassKey;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
+
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Abstract implementation of {@link TransactionAttributeSource} that caches
@@ -72,20 +71,12 @@ public abstract class AbstractFallbackTransactionAttributeSource implements Tran
 	protected final Log logger = LogFactory.getLog(getClass());
 
 	/**
-	 * Cache of TransactionAttributes, keyed by method on a specific target class.
-	 * <p>As this base class is not marked Serializable, the cache will be recreated
-	 * after serialization - provided that the concrete subclass is Serializable.
+	 * 缓存的 TransactionAttribute
 	 */
 	private final Map<Object, TransactionAttribute> attributeCache = new ConcurrentHashMap<>(1024);
 
-
 	/**
-	 * Determine the transaction attribute for this method invocation.
-	 * <p>Defaults to the class's transaction attribute if no method attribute is found.
-	 * @param method the method for the current invocation (never {@code null})
-	 * @param targetClass the target class for this invocation (may be {@code null})
-	 * @return a TransactionAttribute for this method, or {@code null} if the method
-	 * is not transactional
+	 * 获取 TransactionAttribute
 	 */
 	@Override
 	@Nullable
@@ -93,13 +84,10 @@ public abstract class AbstractFallbackTransactionAttributeSource implements Tran
 		if (method.getDeclaringClass() == Object.class) {
 			return null;
 		}
-
-		// First, see if we have a cached value.
+		// 从缓存获取 TransactionAttribute
 		Object cacheKey = getCacheKey(method, targetClass);
 		TransactionAttribute cached = this.attributeCache.get(cacheKey);
 		if (cached != null) {
-			// Value will either be canonical value indicating there is no transaction attribute,
-			// or an actual transaction attribute.
 			if (cached == NULL_TRANSACTION_ATTRIBUTE) {
 				return null;
 			}
@@ -107,14 +95,17 @@ public abstract class AbstractFallbackTransactionAttributeSource implements Tran
 				return cached;
 			}
 		}
+		// 获取不到, 则创建之
 		else {
-			// We need to work it out.
+			// 创建 TransactionAttribute
 			TransactionAttribute txAttr = computeTransactionAttribute(method, targetClass);
-			// Put it in the cache.
+			// 缓存 TransactionAttribute
 			if (txAttr == null) {
 				this.attributeCache.put(cacheKey, NULL_TRANSACTION_ATTRIBUTE);
 			}
 			else {
+				this.attributeCache.put(cacheKey, txAttr);
+				// 设置 descriptor
 				String methodIdentification = ClassUtils.getQualifiedMethodName(method, targetClass);
 				if (txAttr instanceof DefaultTransactionAttribute) {
 					((DefaultTransactionAttribute) txAttr).setDescriptor(methodIdentification);
@@ -122,7 +113,7 @@ public abstract class AbstractFallbackTransactionAttributeSource implements Tran
 				if (logger.isTraceEnabled()) {
 					logger.trace("Adding transactional method '" + methodIdentification + "' with attribute: " + txAttr);
 				}
-				this.attributeCache.put(cacheKey, txAttr);
+
 			}
 			return txAttr;
 		}
@@ -141,42 +132,35 @@ public abstract class AbstractFallbackTransactionAttributeSource implements Tran
 	}
 
 	/**
-	 * Same signature as {@link #getTransactionAttribute}, but doesn't cache the result.
-	 * {@link #getTransactionAttribute} is effectively a caching decorator for this method.
-	 * <p>As of 4.1.8, this method can be overridden.
-	 * @since 4.1.8
-	 * @see #getTransactionAttribute
+	 * 创建 TransactionAttribute
 	 */
 	@Nullable
 	protected TransactionAttribute computeTransactionAttribute(Method method, @Nullable Class<?> targetClass) {
-		// Don't allow no-public methods as required.
+		// 如果只允许 public 方法且当前方法非 public, 则返回 null
 		if (allowPublicMethodsOnly() && !Modifier.isPublic(method.getModifiers())) {
 			return null;
 		}
-
 		// The method may be on an interface, but we need attributes from the target class.
 		// If the target class is null, the method will be unchanged.
 		Method specificMethod = AopUtils.getMostSpecificMethod(method, targetClass);
-
-		// First try is the method in the target class.
+		// 从 specificMethod 上查找 @Transactional
 		TransactionAttribute txAttr = findTransactionAttribute(specificMethod);
 		if (txAttr != null) {
 			return txAttr;
 		}
-
-		// Second try is the transaction attribute on the target class.
+		// 从 specificMethod.class 上查找 @Transactional
 		txAttr = findTransactionAttribute(specificMethod.getDeclaringClass());
 		if (txAttr != null && ClassUtils.isUserLevelMethod(method)) {
 			return txAttr;
 		}
-
+		// 以上条件失败, 则从 method 上查找
 		if (specificMethod != method) {
-			// Fallback is to look at the original method.
+			// 从 method 上查找 @Transactional
 			txAttr = findTransactionAttribute(method);
 			if (txAttr != null) {
 				return txAttr;
 			}
-			// Last fallback is the class of the original method.
+			// 从 method.class 上查找 @Transactional
 			txAttr = findTransactionAttribute(method.getDeclaringClass());
 			if (txAttr != null && ClassUtils.isUserLevelMethod(method)) {
 				return txAttr;
@@ -197,10 +181,7 @@ public abstract class AbstractFallbackTransactionAttributeSource implements Tran
 	protected abstract TransactionAttribute findTransactionAttribute(Class<?> clazz);
 
 	/**
-	 * Subclasses need to implement this to return the transaction attribute for the
-	 * given method, if any.
-	 * @param method the method to retrieve the attribute for
-	 * @return all transaction attribute associated with this method, or {@code null} if none
+	 * 查找 @Transactional
 	 */
 	@Nullable
 	protected abstract TransactionAttribute findTransactionAttribute(Method method);

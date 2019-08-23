@@ -16,6 +16,13 @@
 
 package org.springframework.transaction.support;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.core.NamedThreadLocal;
+import org.springframework.core.annotation.AnnotationAwareOrderComparator;
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -23,14 +30,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.springframework.core.NamedThreadLocal;
-import org.springframework.core.annotation.AnnotationAwareOrderComparator;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
 
 /**
  * Central delegate that manages resources and transaction synchronizations per thread.
@@ -77,24 +76,19 @@ import org.springframework.util.Assert;
 public abstract class TransactionSynchronizationManager {
 
 	private static final Log logger = LogFactory.getLog(TransactionSynchronizationManager.class);
-
-	private static final ThreadLocal<Map<Object, Object>> resources =
-			new NamedThreadLocal<>("Transactional resources");
-
-	private static final ThreadLocal<Set<TransactionSynchronization>> synchronizations =
-			new NamedThreadLocal<>("Transaction synchronizations");
-
-	private static final ThreadLocal<String> currentTransactionName =
-			new NamedThreadLocal<>("Current transaction name");
-
-	private static final ThreadLocal<Boolean> currentTransactionReadOnly =
-			new NamedThreadLocal<>("Current transaction read-only status");
-
-	private static final ThreadLocal<Integer> currentTransactionIsolationLevel =
-			new NamedThreadLocal<>("Current transaction isolation level");
-
-	private static final ThreadLocal<Boolean> actualTransactionActive =
-			new NamedThreadLocal<>("Actual transaction active");
+	// 当前正在执行的事务使用的 ConnnectionHolder
+	// key -> Datasource, value -> ConnnectionHolder
+	private static final ThreadLocal<Map<Object, Object>> resources = new NamedThreadLocal<>("Transactional resources");
+	// ???
+	private static final ThreadLocal<Set<TransactionSynchronization>> synchronizations = new NamedThreadLocal<>("Transaction synchronizations");
+	// 当前正在执行的事务名称
+	private static final ThreadLocal<String> currentTransactionName = new NamedThreadLocal<>("Current transaction name");
+	// 当前正在执行的事务是否只读
+	private static final ThreadLocal<Boolean> currentTransactionReadOnly = new NamedThreadLocal<>("Current transaction read-only status");
+	// 当前正在执行的事务隔离级别
+	private static final ThreadLocal<Integer> currentTransactionIsolationLevel = new NamedThreadLocal<>("Current transaction isolation level");
+	// 当前正在执行的事务是否已激活
+	private static final ThreadLocal<Boolean> actualTransactionActive = new NamedThreadLocal<>("Actual transaction active");
 
 
 	//-------------------------------------------------------------------------
@@ -128,66 +122,65 @@ public abstract class TransactionSynchronizationManager {
 	}
 
 	/**
-	 * Retrieve a resource for the given key that is bound to the current thread.
-	 * @param key the key to check (usually the resource factory)
-	 * @return a value bound to the current thread (usually the active
-	 * resource object), or {@code null} if none
-	 * @see ResourceTransactionManager#getResourceFactory()
+	 * 获取资源
 	 */
 	@Nullable
 	public static Object getResource(Object key) {
+		// unwrapResource
 		Object actualKey = TransactionSynchronizationUtils.unwrapResourceIfNecessary(key);
+		// 从 TL 获取资源
 		Object value = doGetResource(actualKey);
 		if (value != null && logger.isTraceEnabled()) {
 			logger.trace("Retrieved value [" + value + "] for key [" + actualKey + "] bound to thread [" +
 					Thread.currentThread().getName() + "]");
 		}
+		// 返回
 		return value;
 	}
 
 	/**
-	 * Actually check the value of the resource that is bound for the given key.
+	 * 真•获取资源
 	 */
 	@Nullable
 	private static Object doGetResource(Object actualKey) {
+		// 如果资源集合为空, 则返回空
 		Map<Object, Object> map = resources.get();
 		if (map == null) {
 			return null;
 		}
+		// 获取资源
 		Object value = map.get(actualKey);
-		// Transparently remove ResourceHolder that was marked as void...
+		// 如果资源为空, 则移除资源
 		if (value instanceof ResourceHolder && ((ResourceHolder) value).isVoid()) {
 			map.remove(actualKey);
-			// Remove entire ThreadLocal if empty...
+			// 如果资源集合为空, 则移除资源集合
 			if (map.isEmpty()) {
 				resources.remove();
 			}
 			value = null;
 		}
+		// 返回
 		return value;
 	}
 
 	/**
-	 * Bind the given resource for the given key to the current thread.
-	 * @param key the key to bind the value to (usually the resource factory)
-	 * @param value the value to bind (usually the active resource object)
-	 * @throws IllegalStateException if there is already a value bound to the thread
-	 * @see ResourceTransactionManager#getResourceFactory()
+	 * 绑定资源到 TL
 	 */
 	public static void bindResource(Object key, Object value) throws IllegalStateException {
 		Object actualKey = TransactionSynchronizationUtils.unwrapResourceIfNecessary(key);
 		Assert.notNull(value, "Value must not be null");
+		// 获取资源集合
 		Map<Object, Object> map = resources.get();
-		// set ThreadLocal Map if none found
 		if (map == null) {
 			map = new HashMap<>();
 			resources.set(map);
 		}
+		// 绑定资源
 		Object oldValue = map.put(actualKey, value);
-		// Transparently suppress a ResourceHolder that was marked as void...
 		if (oldValue instanceof ResourceHolder && ((ResourceHolder) oldValue).isVoid()) {
 			oldValue = null;
 		}
+		// 如果已绑定资源, 则抛出异常
 		if (oldValue != null) {
 			throw new IllegalStateException("Already value [" + oldValue + "] for key [" +
 					actualKey + "] bound to thread [" + Thread.currentThread().getName() + "]");
@@ -199,11 +192,7 @@ public abstract class TransactionSynchronizationManager {
 	}
 
 	/**
-	 * Unbind a resource for the given key from the current thread.
-	 * @param key the key to unbind (usually the resource factory)
-	 * @return the previously bound value (usually the active resource object)
-	 * @throws IllegalStateException if there is no value bound to the thread
-	 * @see ResourceTransactionManager#getResourceFactory()
+	 * 解绑资源
 	 */
 	public static Object unbindResource(Object key) throws IllegalStateException {
 		Object actualKey = TransactionSynchronizationUtils.unwrapResourceIfNecessary(key);
@@ -227,20 +216,22 @@ public abstract class TransactionSynchronizationManager {
 	}
 
 	/**
-	 * Actually remove the value of the resource that is bound for the given key.
+	 * 真•解绑资源
 	 */
 	@Nullable
 	private static Object doUnbindResource(Object actualKey) {
+		// 获取资源结合
 		Map<Object, Object> map = resources.get();
 		if (map == null) {
 			return null;
 		}
+		// 移除资源
 		Object value = map.remove(actualKey);
-		// Remove entire ThreadLocal if empty...
+		// 如果需要, 移除资源集合
 		if (map.isEmpty()) {
 			resources.remove();
 		}
-		// Transparently suppress a ResourceHolder that was marked as void...
+		// 返回被移除的资源
 		if (value instanceof ResourceHolder && ((ResourceHolder) value).isVoid()) {
 			value = null;
 		}
