@@ -16,18 +16,9 @@
 
 package org.springframework.web.servlet.handler;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import javax.servlet.DispatcherType;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.BeanFactoryUtils;
 import org.springframework.beans.factory.BeanNameAware;
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.Ordered;
 import org.springframework.lang.Nullable;
 import org.springframework.util.AntPathMatcher;
@@ -46,6 +37,18 @@ import org.springframework.web.servlet.HandlerExecutionChain;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.util.UrlPathHelper;
+
+import javax.servlet.DispatcherType;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+
+import static org.springframework.beans.factory.BeanFactoryUtils.beansOfTypeIncludingAncestors;
 
 /**
  * Abstract base class for {@link org.springframework.web.servlet.HandlerMapping}
@@ -283,9 +286,7 @@ public abstract class AbstractHandlerMapping extends WebApplicationObjectSupport
 
 
 	/**
-	 * Initializes the interceptors.
-	 * @see #extendInterceptors(java.util.List)
-	 * @see #initInterceptors()
+	 * 初始化 interceptors
 	 */
 	@Override
 	protected void initApplicationContext() throws BeansException {
@@ -307,16 +308,12 @@ public abstract class AbstractHandlerMapping extends WebApplicationObjectSupport
 	}
 
 	/**
-	 * Detect beans of type {@link MappedInterceptor} and add them to the list of mapped interceptors.
-	 * <p>This is called in addition to any {@link MappedInterceptor MappedInterceptors} that may have been provided
-	 * via {@link #setInterceptors}, by default adding all beans of type {@link MappedInterceptor}
-	 * from the current context and its ancestors. Subclasses can override and refine this policy.
-	 * @param mappedInterceptors an empty list to add {@link MappedInterceptor} instances to
+	 * 从 beanFactory 查找 MappedInterceptor, 并将其加入结果集
 	 */
 	protected void detectMappedInterceptors(List<HandlerInterceptor> mappedInterceptors) {
-		mappedInterceptors.addAll(
-				BeanFactoryUtils.beansOfTypeIncludingAncestors(
-						obtainApplicationContext(), MappedInterceptor.class, true, false).values());
+		ApplicationContext ctx = obtainApplicationContext();
+		Collection<MappedInterceptor> values = beansOfTypeIncludingAncestors(ctx, MappedInterceptor.class, true, false).values();
+		mappedInterceptors.addAll(values);
 	}
 
 	/**
@@ -389,44 +386,44 @@ public abstract class AbstractHandlerMapping extends WebApplicationObjectSupport
 
 
 	/**
-	 * Look up a handler for the given request, falling back to the default
-	 * handler if no specific one is found.
-	 * @param request current HTTP request
-	 * @return the corresponding handler instance, or the default handler
-	 * @see #getHandlerInternal
+	 * 获取 HandlerExecutionChain
 	 */
 	@Override
 	@Nullable
 	public final HandlerExecutionChain getHandler(HttpServletRequest request) throws Exception {
+		/**
+		 * 获取 handlerMethod
+		 * @see AbstractHandlerMethodMapping#getHandlerInternal
+		 */
 		Object handler = getHandlerInternal(request);
+		// handler -> null
 		if (handler == null) {
 			handler = getDefaultHandler();
 		}
 		if (handler == null) {
 			return null;
 		}
-		// Bean name or resolved handler?
+		// handler -> bean
 		if (handler instanceof String) {
 			String handlerName = (String) handler;
 			handler = obtainApplicationContext().getBean(handlerName);
 		}
-
+		// 创建 HandlerExecutionChain
 		HandlerExecutionChain executionChain = getHandlerExecutionChain(handler, request);
-
+		// 打印日志
 		if (logger.isTraceEnabled()) {
 			logger.trace("Mapped to " + handler);
 		}
 		else if (logger.isDebugEnabled() && !request.getDispatcherType().equals(DispatcherType.ASYNC)) {
 			logger.debug("Mapped to " + executionChain.getHandler());
 		}
-
+		// cors 处理
 		if (CorsUtils.isCorsRequest(request)) {
 			CorsConfiguration globalConfig = this.corsConfigurationSource.getCorsConfiguration(request);
 			CorsConfiguration handlerConfig = getCorsConfiguration(handler, request);
 			CorsConfiguration config = (globalConfig != null ? globalConfig.combine(handlerConfig) : handlerConfig);
 			executionChain = getCorsHandlerExecutionChain(request, executionChain, config);
 		}
-
 		return executionChain;
 	}
 
@@ -450,8 +447,8 @@ public abstract class AbstractHandlerMapping extends WebApplicationObjectSupport
 	protected abstract Object getHandlerInternal(HttpServletRequest request) throws Exception;
 
 	/**
-	 * Build a {@link HandlerExecutionChain} for the given handler, including
-	 * applicable interceptors.
+	 * 创建 HandlerExecutionChain
+	 *
 	 * <p>The default implementation builds a standard {@link HandlerExecutionChain}
 	 * with the given handler, the handler mapping's common interceptors, and any
 	 * {@link MappedInterceptor MappedInterceptors} matching to the current request URL. Interceptors
@@ -470,17 +467,19 @@ public abstract class AbstractHandlerMapping extends WebApplicationObjectSupport
 	 * @see #getAdaptedInterceptors()
 	 */
 	protected HandlerExecutionChain getHandlerExecutionChain(Object handler, HttpServletRequest request) {
-		HandlerExecutionChain chain = (handler instanceof HandlerExecutionChain ?
-				(HandlerExecutionChain) handler : new HandlerExecutionChain(handler));
-
+		// 创建 HandlerExecutionChain
+		HandlerExecutionChain chain = (handler instanceof HandlerExecutionChain ? (HandlerExecutionChain) handler : new HandlerExecutionChain(handler));
+		// 迭代 adaptedInterceptors
 		String lookupPath = this.urlPathHelper.getLookupPathForRequest(request);
 		for (HandlerInterceptor interceptor : this.adaptedInterceptors) {
+			// 如果 interceptor 是 MappedInterceptor 且匹配 lookupPath, 则加入 chain
 			if (interceptor instanceof MappedInterceptor) {
 				MappedInterceptor mappedInterceptor = (MappedInterceptor) interceptor;
 				if (mappedInterceptor.matches(lookupPath, this.pathMatcher)) {
 					chain.addInterceptor(mappedInterceptor.getInterceptor());
 				}
 			}
+			// 反之, 则直接加入 chain
 			else {
 				chain.addInterceptor(interceptor);
 			}

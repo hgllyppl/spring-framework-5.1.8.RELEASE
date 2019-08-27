@@ -16,12 +16,12 @@
 
 package org.springframework.web.servlet.handler;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.springframework.lang.Nullable;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.ModelAndView;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * Abstract base class for
@@ -34,20 +34,21 @@ import org.springframework.web.servlet.ModelAndView;
 public abstract class AbstractHandlerMethodExceptionResolver extends AbstractHandlerExceptionResolver {
 
 	/**
-	 * Checks if the handler is a {@link HandlerMethod} and then delegates to the
-	 * base class implementation of {@code #shouldApplyTo(HttpServletRequest, Object)}
-	 * passing the bean of the {@code HandlerMethod}. Otherwise returns {@code false}.
+	 * 是否能处理给定 handler 产生的异常
 	 */
 	@Override
 	protected boolean shouldApplyTo(HttpServletRequest request, @Nullable Object handler) {
+		// 如果 handler 为 null, 则调用超类方法
 		if (handler == null) {
 			return super.shouldApplyTo(request, null);
 		}
+		// 反之, 如果是 HandlerMethod 则读取 handle 并调用超类方法
 		else if (handler instanceof HandlerMethod) {
 			HandlerMethod handlerMethod = (HandlerMethod) handler;
 			handler = handlerMethod.getBean();
 			return super.shouldApplyTo(request, handler);
 		}
+		// 都不是, 则返回 false
 		else {
 			return false;
 		}

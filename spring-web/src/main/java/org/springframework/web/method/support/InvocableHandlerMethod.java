@@ -16,10 +16,6 @@
 
 package org.springframework.web.method.support;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.Arrays;
-
 import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ParameterNameDiscoverer;
@@ -27,10 +23,13 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.web.bind.WebDataBinder;
-import org.springframework.web.bind.support.SessionStatus;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.HandlerMethod;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Arrays;
 
 /**
  * Extension of {@link HandlerMethod} that invokes the underlying method with
@@ -109,65 +108,52 @@ public class InvocableHandlerMethod extends HandlerMethod {
 
 
 	/**
-	 * Invoke the method after resolving its argument values in the context of the given request.
-	 * <p>Argument values are commonly resolved through
-	 * {@link HandlerMethodArgumentResolver HandlerMethodArgumentResolvers}.
-	 * The {@code providedArgs} parameter however may supply argument values to be used directly,
-	 * i.e. without argument resolution. Examples of provided argument values include a
-	 * {@link WebDataBinder}, a {@link SessionStatus}, or a thrown exception instance.
-	 * Provided argument values are checked before argument resolvers.
-	 * <p>Delegates to {@link #getMethodArgumentValues} and calls {@link #doInvoke} with the
-	 * resolved arguments.
-	 * @param request the current request
-	 * @param mavContainer the ModelAndViewContainer for this request
-	 * @param providedArgs "given" arguments matched by type, not resolved
-	 * @return the raw value returned by the invoked method
-	 * @throws Exception raised if no suitable argument resolver can be found,
-	 * or if the method raised an exception
-	 * @see #getMethodArgumentValues
-	 * @see #doInvoke
+	 * 解析入参并处理请求
 	 */
 	@Nullable
 	public Object invokeForRequest(NativeWebRequest request, @Nullable ModelAndViewContainer mavContainer,
 			Object... providedArgs) throws Exception {
-
+		// 解析入参
 		Object[] args = getMethodArgumentValues(request, mavContainer, providedArgs);
 		if (logger.isTraceEnabled()) {
 			logger.trace("Arguments: " + Arrays.toString(args));
 		}
+		// 处理请求
 		return doInvoke(args);
 	}
 
 	/**
-	 * Get the method argument values for the current request, checking the provided
-	 * argument values and falling back to the configured argument resolvers.
-	 * <p>The resulting array will be passed into {@link #doInvoke}.
-	 * @since 5.1.2
+	 * 解析入参
 	 */
 	protected Object[] getMethodArgumentValues(NativeWebRequest request, @Nullable ModelAndViewContainer mavContainer,
 			Object... providedArgs) throws Exception {
-
+		// 读取参数信息列表
 		MethodParameter[] parameters = getMethodParameters();
 		if (ObjectUtils.isEmpty(parameters)) {
 			return EMPTY_ARGS;
 		}
-
+		// 迭代参数信息列表并解析参数
 		Object[] args = new Object[parameters.length];
 		for (int i = 0; i < parameters.length; i++) {
 			MethodParameter parameter = parameters[i];
 			parameter.initParameterNameDiscovery(this.parameterNameDiscoverer);
+			// 从 providedArgs 里读取参数
 			args[i] = findProvidedArgument(parameter, providedArgs);
 			if (args[i] != null) {
 				continue;
 			}
+			// 如果是不支持的参数类型, 则抛出异常
 			if (!this.resolvers.supportsParameter(parameter)) {
 				throw new IllegalStateException(formatArgumentError(parameter, "No suitable resolver"));
 			}
+			// 解析参数
 			try {
+				/**
+				 * @see RequestResponseBodyMethodProcessor#resolveArgument
+				 */
 				args[i] = this.resolvers.resolveArgument(parameter, mavContainer, request, this.dataBinderFactory);
 			}
 			catch (Exception ex) {
-				// Leave stack trace for later, exception may actually be resolved and handled...
 				if (logger.isDebugEnabled()) {
 					String exMsg = ex.getMessage();
 					if (exMsg != null && !exMsg.contains(parameter.getExecutable().toGenericString())) {
@@ -181,7 +167,7 @@ public class InvocableHandlerMethod extends HandlerMethod {
 	}
 
 	/**
-	 * Invoke the handler method with the given argument values.
+	 * 反射调用
 	 */
 	@Nullable
 	protected Object doInvoke(Object... args) throws Exception {

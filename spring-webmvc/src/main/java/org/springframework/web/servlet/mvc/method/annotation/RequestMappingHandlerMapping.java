@@ -16,16 +16,6 @@
 
 package org.springframework.web.servlet.mvc.method.annotation;
 
-import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.Method;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Predicate;
-import javax.servlet.http.HttpServletRequest;
-
 import org.springframework.context.EmbeddedValueResolverAware;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.lang.Nullable;
@@ -46,6 +36,16 @@ import org.springframework.web.servlet.mvc.condition.CompositeRequestCondition;
 import org.springframework.web.servlet.mvc.condition.RequestCondition;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfoHandlerMapping;
+
+import javax.servlet.http.HttpServletRequest;
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  * Creates {@link RequestMappingInfo} instances from type and method-level
@@ -217,12 +217,16 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 	@Override
 	@Nullable
 	protected RequestMappingInfo getMappingForMethod(Method method, Class<?> handlerType) {
+		// 使用 method 创建 RequestMappingInfo
 		RequestMappingInfo info = createRequestMappingInfo(method);
 		if (info != null) {
+			// 使用 class 创建 RequestMappingInfo
 			RequestMappingInfo typeInfo = createRequestMappingInfo(handlerType);
+			// 合并 method 与 class 的 RequestMappingInfo
 			if (typeInfo != null) {
 				info = typeInfo.combine(info);
 			}
+			// 合并前缀???
 			String prefix = getPathPrefix(handlerType);
 			if (prefix != null) {
 				info = RequestMappingInfo.paths(prefix).build().combine(info);
@@ -246,18 +250,13 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 	}
 
 	/**
-	 * Delegates to {@link #createRequestMappingInfo(RequestMapping, RequestCondition)},
-	 * supplying the appropriate custom {@link RequestCondition} depending on whether
-	 * the supplied {@code annotatedElement} is a class or method.
-	 * @see #getCustomTypeCondition(Class)
-	 * @see #getCustomMethodCondition(Method)
+	 * 创建 RequestMappingInfo
 	 */
 	@Nullable
 	private RequestMappingInfo createRequestMappingInfo(AnnotatedElement element) {
 		RequestMapping requestMapping = AnnotatedElementUtils.findMergedAnnotation(element, RequestMapping.class);
-		RequestCondition<?> condition = (element instanceof Class ?
-				getCustomTypeCondition((Class<?>) element) : getCustomMethodCondition((Method) element));
-		return (requestMapping != null ? createRequestMappingInfo(requestMapping, condition) : null);
+		RequestCondition<?> condition = (element instanceof Class ? getCustomTypeCondition((Class<?>) element) : getCustomMethodCondition((Method) element));
+		return requestMapping != null ? createRequestMappingInfo(requestMapping, condition) : null;
 	}
 
 	/**
@@ -293,14 +292,11 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 	}
 
 	/**
-	 * Create a {@link RequestMappingInfo} from the supplied
-	 * {@link RequestMapping @RequestMapping} annotation, which is either
-	 * a directly declared annotation, a meta-annotation, or the synthesized
-	 * result of merging annotation attributes within an annotation hierarchy.
+	 * 真•创建 RequestMappingInfo
 	 */
 	protected RequestMappingInfo createRequestMappingInfo(
 			RequestMapping requestMapping, @Nullable RequestCondition<?> customCondition) {
-
+		// 读取 @RequestMapping 注解并生成 RequestMappingInfo
 		RequestMappingInfo.Builder builder = RequestMappingInfo
 				.paths(resolveEmbeddedValuesInPatterns(requestMapping.path()))
 				.methods(requestMapping.method())

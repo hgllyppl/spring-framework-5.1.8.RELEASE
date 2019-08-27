@@ -602,9 +602,11 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		}
 	}
 
-	// 提供给子类处理 beanFactory 的机会
-	// 一个典型的实现是在web环境中继续注册一些 beanPostProcessor、单例bean
-	// @see GenericWebApplicationContext#postProcessBeanFactory
+	/**
+	 * 提供给子类处理 beanFactory 的机会
+	 * 一个典型的实现是在web环境中继续注册 beanPostProcessor、bean 等操作
+	 * @see org.springframework.web.context.support.AbstractRefreshableWebApplicationContext#postProcessBeanFactory
+     */
 	protected void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
 	}
 

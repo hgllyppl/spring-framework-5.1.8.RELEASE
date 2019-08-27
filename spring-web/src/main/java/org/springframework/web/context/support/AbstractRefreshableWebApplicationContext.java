@@ -162,7 +162,10 @@ public abstract class AbstractRefreshableWebApplicationContext extends AbstractR
 	}
 
 	/**
-	 * Register request/session scopes, a {@link ServletContextAwareProcessor}, etc.
+	 * 注册 ServletContextAwareProcessor
+	 * 注册 ServletContextAware、ServletConfigAware
+	 * 注册 RequestScope、SessionScope、ServletContextScope
+	 * 注册 servletContext、servletConfig、contextParameters、contextAttributes
 	 */
 	@Override
 	protected void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {

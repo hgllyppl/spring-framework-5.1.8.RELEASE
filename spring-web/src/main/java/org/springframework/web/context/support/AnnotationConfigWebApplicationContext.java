@@ -16,10 +16,6 @@
 
 package org.springframework.web.context.support;
 
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 import org.springframework.beans.factory.support.BeanNameGenerator;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.annotation.AnnotatedBeanDefinitionReader;
@@ -32,6 +28,10 @@ import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.ContextLoader;
+
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * {@link org.springframework.web.context.WebApplicationContext WebApplicationContext}
@@ -169,45 +169,30 @@ public class AnnotationConfigWebApplicationContext extends AbstractRefreshableWe
 
 
 	/**
-	 * Register a {@link org.springframework.beans.factory.config.BeanDefinition} for
-	 * any classes specified by {@link #register(Class...)} and scan any packages
-	 * specified by {@link #scan(String...)}.
-	 * <p>For any values specified by {@link #setConfigLocation(String)} or
-	 * {@link #setConfigLocations(String[])}, attempt first to load each location as a
-	 * class, registering a {@code BeanDefinition} if class loading is successful,
-	 * and if class loading fails (i.e. a {@code ClassNotFoundException} is raised),
-	 * assume the value is a package and attempt to scan it for annotated classes.
-	 * <p>Enables the default set of annotation configuration post processors, such that
-	 * {@code @Autowired}, {@code @Required}, and associated annotations can be used.
-	 * <p>Configuration class bean definitions are registered with generated bean
-	 * definition names unless the {@code value} attribute is provided to the stereotype
-	 * annotation.
-	 * @param beanFactory the bean factory to load bean definitions into
-	 * @see #register(Class...)
-	 * @see #scan(String...)
-	 * @see #setConfigLocation(String)
-	 * @see #setConfigLocations(String[])
-	 * @see AnnotatedBeanDefinitionReader
-	 * @see ClassPathBeanDefinitionScanner
+	 * 注册以下3个位置的 bean
+	 * @see #annotatedClasses
+	 * @see #basePackages
+	 * @see #getConfigLocations
 	 */
 	@Override
 	protected void loadBeanDefinitions(DefaultListableBeanFactory beanFactory) {
+		// reader & scanner
 		AnnotatedBeanDefinitionReader reader = getAnnotatedBeanDefinitionReader(beanFactory);
 		ClassPathBeanDefinitionScanner scanner = getClassPathBeanDefinitionScanner(beanFactory);
-
+		// 注册 beanNameGenerator
 		BeanNameGenerator beanNameGenerator = getBeanNameGenerator();
 		if (beanNameGenerator != null) {
 			reader.setBeanNameGenerator(beanNameGenerator);
 			scanner.setBeanNameGenerator(beanNameGenerator);
 			beanFactory.registerSingleton(AnnotationConfigUtils.CONFIGURATION_BEAN_NAME_GENERATOR, beanNameGenerator);
 		}
-
+		// scopeMetadataResolver
 		ScopeMetadataResolver scopeMetadataResolver = getScopeMetadataResolver();
 		if (scopeMetadataResolver != null) {
 			reader.setScopeMetadataResolver(scopeMetadataResolver);
 			scanner.setScopeMetadataResolver(scopeMetadataResolver);
 		}
-
+		// 使用 reader 注册 annotatedClasses
 		if (!this.annotatedClasses.isEmpty()) {
 			if (logger.isDebugEnabled()) {
 				logger.debug("Registering annotated classes: [" +
@@ -215,7 +200,7 @@ public class AnnotationConfigWebApplicationContext extends AbstractRefreshableWe
 			}
 			reader.register(ClassUtils.toClassArray(this.annotatedClasses));
 		}
-
+		// 使用 scanner 注册 basePackages 下的 bean
 		if (!this.basePackages.isEmpty()) {
 			if (logger.isDebugEnabled()) {
 				logger.debug("Scanning base packages: [" +
@@ -223,7 +208,7 @@ public class AnnotationConfigWebApplicationContext extends AbstractRefreshableWe
 			}
 			scanner.scan(StringUtils.toStringArray(this.basePackages));
 		}
-
+		// 使用 reader 注册 configLocations 下的 bean
 		String[] configLocations = getConfigLocations();
 		if (configLocations != null) {
 			for (String configLocation : configLocations) {

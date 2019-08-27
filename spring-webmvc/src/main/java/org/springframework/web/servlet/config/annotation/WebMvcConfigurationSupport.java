@@ -16,15 +16,6 @@
 
 package org.springframework.web.servlet.config.annotation;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.function.Predicate;
-import javax.servlet.ServletContext;
-
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.BeanFactoryUtils;
 import org.springframework.beans.factory.BeanInitializationException;
@@ -97,6 +88,15 @@ import org.springframework.web.servlet.resource.ResourceUrlProviderExposingInter
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 import org.springframework.web.servlet.view.ViewResolverComposite;
 import org.springframework.web.util.UrlPathHelper;
+
+import javax.servlet.ServletContext;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.function.Predicate;
 
 /**
  * This is the main class providing the configuration behind the MVC Java config.
@@ -267,8 +267,7 @@ public class WebMvcConfigurationSupport implements ApplicationContextAware, Serv
 
 
 	/**
-	 * Return a {@link RequestMappingHandlerMapping} ordered at 0 for mapping
-	 * requests to annotated controllers.
+	 * 创建 RequestMappingHandlerMapping
 	 */
 	@Bean
 	public RequestMappingHandlerMapping requestMappingHandlerMapping() {
@@ -277,9 +276,8 @@ public class WebMvcConfigurationSupport implements ApplicationContextAware, Serv
 		mapping.setInterceptors(getInterceptors());
 		mapping.setContentNegotiationManager(mvcContentNegotiationManager());
 		mapping.setCorsConfigurations(getCorsConfigurations());
-
+		//-----------------------下面这段代码默认不执行----------------------------------------
 		PathMatchConfigurer configurer = getPathMatchConfigurer();
-
 		Boolean useSuffixPatternMatch = configurer.isUseSuffixPatternMatch();
 		if (useSuffixPatternMatch != null) {
 			mapping.setUseSuffixPatternMatch(useSuffixPatternMatch);
@@ -292,7 +290,6 @@ public class WebMvcConfigurationSupport implements ApplicationContextAware, Serv
 		if (useTrailingSlashMatch != null) {
 			mapping.setUseTrailingSlashMatch(useTrailingSlashMatch);
 		}
-
 		UrlPathHelper pathHelper = configurer.getUrlPathHelper();
 		if (pathHelper != null) {
 			mapping.setUrlPathHelper(pathHelper);
@@ -305,7 +302,7 @@ public class WebMvcConfigurationSupport implements ApplicationContextAware, Serv
 		if (pathPrefixes != null) {
 			mapping.setPathPrefixes(pathPrefixes);
 		}
-
+		//---------------------------------------------------------------
 		return mapping;
 	}
 
@@ -547,29 +544,24 @@ public class WebMvcConfigurationSupport implements ApplicationContextAware, Serv
 	}
 
 	/**
-	 * Returns a {@link RequestMappingHandlerAdapter} for processing requests
-	 * through annotated controller methods. Consider overriding one of these
-	 * other more fine-grained methods:
-	 * <ul>
-	 * <li>{@link #addArgumentResolvers} for adding custom argument resolvers.
-	 * <li>{@link #addReturnValueHandlers} for adding custom return value handlers.
-	 * <li>{@link #configureMessageConverters} for adding custom message converters.
-	 * </ul>
+	 * 创建 RequestMappingHandlerAdapter
 	 */
 	@Bean
 	public RequestMappingHandlerAdapter requestMappingHandlerAdapter() {
 		RequestMappingHandlerAdapter adapter = createRequestMappingHandlerAdapter();
+		//
 		adapter.setContentNegotiationManager(mvcContentNegotiationManager());
 		adapter.setMessageConverters(getMessageConverters());
 		adapter.setWebBindingInitializer(getConfigurableWebBindingInitializer());
+		// 设置入参、出参处理器
 		adapter.setCustomArgumentResolvers(getArgumentResolvers());
 		adapter.setCustomReturnValueHandlers(getReturnValueHandlers());
-
+		// 注册 request、response advice
 		if (jackson2Present) {
 			adapter.setRequestBodyAdvice(Collections.singletonList(new JsonViewRequestBodyAdvice()));
 			adapter.setResponseBodyAdvice(Collections.singletonList(new JsonViewResponseBodyAdvice()));
 		}
-
+		//
 		AsyncSupportConfigurer configurer = new AsyncSupportConfigurer();
 		configureAsyncSupport(configurer);
 		if (configurer.getTaskExecutor() != null) {
@@ -580,7 +572,7 @@ public class WebMvcConfigurationSupport implements ApplicationContextAware, Serv
 		}
 		adapter.setCallableInterceptors(configurer.getCallableInterceptors());
 		adapter.setDeferredResultInterceptors(configurer.getDeferredResultInterceptors());
-
+		//
 		return adapter;
 	}
 
@@ -870,21 +862,18 @@ public class WebMvcConfigurationSupport implements ApplicationContextAware, Serv
 	}
 
 	/**
-	 * Returns a {@link HandlerExceptionResolverComposite} containing a list of exception
-	 * resolvers obtained either through {@link #configureHandlerExceptionResolvers} or
-	 * through {@link #addDefaultHandlerExceptionResolvers}.
-	 * <p><strong>Note:</strong> This method cannot be made final due to CGLIB constraints.
-	 * Rather than overriding it, consider overriding {@link #configureHandlerExceptionResolvers}
-	 * which allows for providing a list of resolvers.
+	 * 创建 HandlerExceptionResolver
 	 */
 	@Bean
 	public HandlerExceptionResolver handlerExceptionResolver() {
 		List<HandlerExceptionResolver> exceptionResolvers = new ArrayList<>();
 		configureHandlerExceptionResolvers(exceptionResolvers);
+		// 添加默认 HandlerExceptionResolver
 		if (exceptionResolvers.isEmpty()) {
 			addDefaultHandlerExceptionResolvers(exceptionResolvers);
 		}
 		extendHandlerExceptionResolvers(exceptionResolvers);
+		// 聚合 HandlerExceptionResolver
 		HandlerExceptionResolverComposite composite = new HandlerExceptionResolverComposite();
 		composite.setOrder(0);
 		composite.setExceptionResolvers(exceptionResolvers);
@@ -926,25 +915,28 @@ public class WebMvcConfigurationSupport implements ApplicationContextAware, Serv
 	 * </ul>
 	 */
 	protected final void addDefaultHandlerExceptionResolvers(List<HandlerExceptionResolver> exceptionResolvers) {
+		// 创建并配置 ExceptionHandlerExceptionResolver
 		ExceptionHandlerExceptionResolver exceptionHandlerResolver = createExceptionHandlerExceptionResolver();
 		exceptionHandlerResolver.setContentNegotiationManager(mvcContentNegotiationManager());
 		exceptionHandlerResolver.setMessageConverters(getMessageConverters());
 		exceptionHandlerResolver.setCustomArgumentResolvers(getArgumentResolvers());
 		exceptionHandlerResolver.setCustomReturnValueHandlers(getReturnValueHandlers());
 		if (jackson2Present) {
-			exceptionHandlerResolver.setResponseBodyAdvice(
-					Collections.singletonList(new JsonViewResponseBodyAdvice()));
+			exceptionHandlerResolver.setResponseBodyAdvice(Collections.singletonList(new JsonViewResponseBodyAdvice()));
 		}
 		if (this.applicationContext != null) {
 			exceptionHandlerResolver.setApplicationContext(this.applicationContext);
 		}
+		// 初始化 ExceptionHandlerExceptionResolver
 		exceptionHandlerResolver.afterPropertiesSet();
-		exceptionResolvers.add(exceptionHandlerResolver);
 
+		// 添加 ExceptionHandlerExceptionResolver
+		exceptionResolvers.add(exceptionHandlerResolver);
+		// 添加 ResponseStatusExceptionResolver
 		ResponseStatusExceptionResolver responseStatusResolver = new ResponseStatusExceptionResolver();
 		responseStatusResolver.setMessageSource(this.applicationContext);
 		exceptionResolvers.add(responseStatusResolver);
-
+		// 添加 DefaultHandlerExceptionResolver
 		exceptionResolvers.add(new DefaultHandlerExceptionResolver());
 	}
 

@@ -16,18 +16,17 @@
 
 package org.springframework.web.servlet.handler;
 
-import java.util.Set;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.core.Ordered;
 import org.springframework.lang.Nullable;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.web.servlet.ModelAndView;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.util.Set;
 
 /**
  * Abstract base class for {@link HandlerExceptionResolver} implementations.
@@ -134,16 +133,16 @@ public abstract class AbstractHandlerExceptionResolver implements HandlerExcepti
 	@Nullable
 	public ModelAndView resolveException(
 			HttpServletRequest request, HttpServletResponse response, @Nullable Object handler, Exception ex) {
-
+		// 是否能处理异常
 		if (shouldApplyTo(request, handler)) {
 			prepareResponse(ex, response);
+			// 处理异常
 			ModelAndView result = doResolveException(request, response, handler, ex);
+			// 打印日志
 			if (result != null) {
-				// Print debug message when warn logger is not enabled.
 				if (logger.isDebugEnabled() && (this.warnLogger == null || !this.warnLogger.isWarnEnabled())) {
 					logger.debug("Resolved [" + ex + "]" + (result.isEmpty() ? "" : " to " + result));
 				}
-				// Explicitly configured warn logger in logException method.
 				logException(ex, request);
 			}
 			return result;
@@ -154,19 +153,10 @@ public abstract class AbstractHandlerExceptionResolver implements HandlerExcepti
 	}
 
 	/**
-	 * Check whether this resolver is supposed to apply to the given handler.
-	 * <p>The default implementation checks against the configured
-	 * {@linkplain #setMappedHandlers handlers} and
-	 * {@linkplain #setMappedHandlerClasses handler classes}, if any.
-	 * @param request current HTTP request
-	 * @param handler the executed handler, or {@code null} if none chosen
-	 * at the time of the exception (for example, if multipart resolution failed)
-	 * @return whether this resolved should proceed with resolving the exception
-	 * for the given request and handler
-	 * @see #setMappedHandlers
-	 * @see #setMappedHandlerClasses
+	 * 是否能处理给定 handler 产生的异常
 	 */
 	protected boolean shouldApplyTo(HttpServletRequest request, @Nullable Object handler) {
+		// 如果 handler 包含在 mappedHandlers 或 mappedHandlerClasses, 则返回 true
 		if (handler != null) {
 			if (this.mappedHandlers != null && this.mappedHandlers.contains(handler)) {
 				return true;
@@ -179,7 +169,7 @@ public abstract class AbstractHandlerExceptionResolver implements HandlerExcepti
 				}
 			}
 		}
-		// Else only apply if there are no explicit handler mappings.
+		// 如果 mappedHandlers 与 mappedHandlerClasses 均为空, 则返回 true
 		return (this.mappedHandlers == null && this.mappedHandlerClasses == null);
 	}
 

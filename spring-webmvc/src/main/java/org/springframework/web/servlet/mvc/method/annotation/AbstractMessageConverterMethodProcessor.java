@@ -16,18 +16,6 @@
 
 package org.springframework.web.servlet.mvc.method.annotation;
 
-import java.io.IOException;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.springframework.core.GenericTypeResolver;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ParameterizedTypeReference;
@@ -42,9 +30,11 @@ import org.springframework.http.HttpOutputMessage;
 import org.springframework.http.HttpRange;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.AbstractGenericHttpMessageConverter;
 import org.springframework.http.converter.GenericHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.HttpMessageNotWritableException;
+import org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.http.server.ServletServerHttpResponse;
 import org.springframework.lang.Nullable;
@@ -59,6 +49,18 @@ import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.util.UrlPathHelper;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 /**
  * Extends {@link AbstractMessageConverterMethodArgumentResolver} with the ability to handle method
@@ -168,24 +170,16 @@ public abstract class AbstractMessageConverterMethodProcessor extends AbstractMe
 	}
 
 	/**
-	 * Writes the given return type to the given output message.
-	 * @param value the value to write to the output message
-	 * @param returnType the type of the value
-	 * @param inputMessage the input messages. Used to inspect the {@code Accept} header.
-	 * @param outputMessage the output message to write to
-	 * @throws IOException thrown in case of I/O errors
-	 * @throws HttpMediaTypeNotAcceptableException thrown when the conditions indicated
-	 * by the {@code Accept} header on the request cannot be met by the message converters
+	 * 将出参写入 response
 	 */
 	@SuppressWarnings({"rawtypes", "unchecked"})
 	protected <T> void writeWithMessageConverters(@Nullable T value, MethodParameter returnType,
 			ServletServerHttpRequest inputMessage, ServletServerHttpResponse outputMessage)
 			throws IOException, HttpMediaTypeNotAcceptableException, HttpMessageNotWritableException {
-
+		// 读取返回值类型
 		Object body;
 		Class<?> valueType;
 		Type targetType;
-
 		if (value instanceof CharSequence) {
 			body = value.toString();
 			valueType = String.class;
@@ -196,11 +190,12 @@ public abstract class AbstractMessageConverterMethodProcessor extends AbstractMe
 			valueType = getReturnValueType(body, returnType);
 			targetType = GenericTypeResolver.resolveType(getGenericType(returnType), returnType.getContainingClass());
 		}
-
+		// 如果是流类型 ???
 		if (isResourceType(value, returnType)) {
 			outputMessage.getHeaders().set(HttpHeaders.ACCEPT_RANGES, "bytes");
-			if (value != null && inputMessage.getHeaders().getFirst(HttpHeaders.RANGE) != null &&
-					outputMessage.getServletResponse().getStatus() == 200) {
+			if (value != null
+					&& inputMessage.getHeaders().getFirst(HttpHeaders.RANGE) != null
+					&& outputMessage.getServletResponse().getStatus() == 200) {
 				Resource resource = (Resource) value;
 				try {
 					List<HttpRange> httpRanges = inputMessage.getHeaders().getRange();
@@ -215,8 +210,9 @@ public abstract class AbstractMessageConverterMethodProcessor extends AbstractMe
 				}
 			}
 		}
-
+		// 选择响应类型
 		MediaType selectedMediaType = null;
+		// 如果已输出响应类型, 则直接选择
 		MediaType contentType = outputMessage.getHeaders().getContentType();
 		if (contentType != null && contentType.isConcrete()) {
 			if (logger.isDebugEnabled()) {
@@ -224,15 +220,19 @@ public abstract class AbstractMessageConverterMethodProcessor extends AbstractMe
 			}
 			selectedMediaType = contentType;
 		}
+		// 反之, 则根据客户端接受的类型和服务端输出的类型, 选择一个可以响应的类型
 		else {
 			HttpServletRequest request = inputMessage.getServletRequest();
+			// 读取客户端能够接受的响应类型
 			List<MediaType> acceptableTypes = getAcceptableMediaTypes(request);
+			// 读取服务端支持的响应类型
 			List<MediaType> producibleTypes = getProducibleMediaTypes(request, valueType, targetType);
-
+			// 如果服务端支持的响应类型为空, 则抛出异常
 			if (body != null && producibleTypes.isEmpty()) {
 				throw new HttpMessageNotWritableException(
 						"No converter found for return value of type: " + valueType);
 			}
+			// 匹配客户端能够支持的响应类型
 			List<MediaType> mediaTypesToUse = new ArrayList<>();
 			for (MediaType requestedType : acceptableTypes) {
 				for (MediaType producibleType : producibleTypes) {
@@ -241,6 +241,7 @@ public abstract class AbstractMessageConverterMethodProcessor extends AbstractMe
 					}
 				}
 			}
+			// 如果匹配结果为空, 则抛出异常
 			if (mediaTypesToUse.isEmpty()) {
 				if (body != null) {
 					throw new HttpMediaTypeNotAcceptableException(producibleTypes);
@@ -250,9 +251,8 @@ public abstract class AbstractMessageConverterMethodProcessor extends AbstractMe
 				}
 				return;
 			}
-
+			// 选择第一个具体类型的响应类型
 			MediaType.sortBySpecificityAndQuality(mediaTypesToUse);
-
 			for (MediaType mediaType : mediaTypesToUse) {
 				if (mediaType.isConcrete()) {
 					selectedMediaType = mediaType;
@@ -263,29 +263,36 @@ public abstract class AbstractMessageConverterMethodProcessor extends AbstractMe
 					break;
 				}
 			}
-
+			// 打印日志
 			if (logger.isDebugEnabled()) {
 				logger.debug("Using '" + selectedMediaType + "', given " +
 						acceptableTypes + " and supported " + producibleTypes);
 			}
 		}
-
+		// 如果输出类型非 null
 		if (selectedMediaType != null) {
 			selectedMediaType = selectedMediaType.removeQualityValue();
+			// 迭代 messageConverters 并输出 body
 			for (HttpMessageConverter<?> converter : this.messageConverters) {
-				GenericHttpMessageConverter genericConverter = (converter instanceof GenericHttpMessageConverter ?
-						(GenericHttpMessageConverter<?>) converter : null);
+				GenericHttpMessageConverter genericConverter = (converter instanceof GenericHttpMessageConverter ? (GenericHttpMessageConverter<?>) converter : null);
+				// 是否支持要输出的 body
 				if (genericConverter != null ?
 						((GenericHttpMessageConverter) converter).canWrite(targetType, valueType, selectedMediaType) :
 						converter.canWrite(valueType, selectedMediaType)) {
+					// 前置 advice
 					body = getAdvice().beforeBodyWrite(body, returnType, selectedMediaType,
 							(Class<? extends HttpMessageConverter<?>>) converter.getClass(),
 							inputMessage, outputMessage);
 					if (body != null) {
 						Object theBody = body;
-						LogFormatUtils.traceDebug(logger, traceOn ->
-								"Writing [" + LogFormatUtils.formatValue(theBody, !traceOn) + "]");
+						LogFormatUtils.traceDebug(logger, traceOn -> "Writing [" + LogFormatUtils.formatValue(theBody, !traceOn) + "]");
+						// ContentDisposition ???
 						addContentDispositionHeader(inputMessage, outputMessage);
+						/**
+                         * 输出 body
+						 * @see AbstractGenericHttpMessageConverter#write
+						 * @see AbstractJackson2HttpMessageConverter#writeInternal
+						 */
 						if (genericConverter != null) {
 							genericConverter.write(body, targetType, selectedMediaType, outputMessage);
 						}
@@ -302,7 +309,7 @@ public abstract class AbstractMessageConverterMethodProcessor extends AbstractMe
 				}
 			}
 		}
-
+		// 如果无法输出 body, 则抛出异常
 		if (body != null) {
 			throw new HttpMediaTypeNotAcceptableException(this.allSupportedMediaTypes);
 		}
@@ -349,26 +356,22 @@ public abstract class AbstractMessageConverterMethodProcessor extends AbstractMe
 	}
 
 	/**
-	 * Returns the media types that can be produced. The resulting media types are:
-	 * <ul>
-	 * <li>The producible media types specified in the request mappings, or
-	 * <li>Media types of configured converters that can write the specific return value, or
-	 * <li>{@link MediaType#ALL}
-	 * </ul>
-	 * @since 4.2
+	 * 读取支持的响应类型
 	 */
 	@SuppressWarnings("unchecked")
 	protected List<MediaType> getProducibleMediaTypes(
 			HttpServletRequest request, Class<?> valueClass, @Nullable Type targetType) {
-
-		Set<MediaType> mediaTypes =
-				(Set<MediaType>) request.getAttribute(HandlerMapping.PRODUCIBLE_MEDIA_TYPES_ATTRIBUTE);
+		// 从 request 读取 mediaTypes
+		Set<MediaType> mediaTypes = (Set<MediaType>) request.getAttribute(HandlerMapping.PRODUCIBLE_MEDIA_TYPES_ATTRIBUTE);
+		// 如果 mediaTypes 非空, 则直接返回
 		if (!CollectionUtils.isEmpty(mediaTypes)) {
 			return new ArrayList<>(mediaTypes);
 		}
+		// 反之, 则迭代 messageConverters 找出支持的 mediaTypes
 		else if (!this.allSupportedMediaTypes.isEmpty()) {
 			List<MediaType> result = new ArrayList<>();
 			for (HttpMessageConverter<?> converter : this.messageConverters) {
+				// 将支持的 mediaTypes 加入结果集
 				if (converter instanceof GenericHttpMessageConverter && targetType != null) {
 					if (((GenericHttpMessageConverter<?>) converter).canWrite(targetType, valueClass, null)) {
 						result.addAll(converter.getSupportedMediaTypes());

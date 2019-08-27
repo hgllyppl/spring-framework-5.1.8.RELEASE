@@ -16,24 +16,8 @@
 
 package org.springframework.web.servlet.mvc.method.annotation;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PushbackInputStream;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import javax.servlet.http.HttpServletRequest;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -47,6 +31,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.converter.GenericHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -57,6 +42,21 @@ import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+
+import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PushbackInputStream;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * A base class for resolving method argument values by reading from the body of
@@ -164,7 +164,7 @@ public abstract class AbstractMessageConverterMethodArgumentResolver implements 
 	@Nullable
 	protected <T> Object readWithMessageConverters(HttpInputMessage inputMessage, MethodParameter parameter,
 			Type targetType) throws IOException, HttpMediaTypeNotSupportedException, HttpMessageNotReadableException {
-
+		// 读取 contentType
 		MediaType contentType;
 		boolean noContentType = false;
 		try {
@@ -177,32 +177,38 @@ public abstract class AbstractMessageConverterMethodArgumentResolver implements 
 			noContentType = true;
 			contentType = MediaType.APPLICATION_OCTET_STREAM;
 		}
-
+		// 读取参数的上下文类型
 		Class<?> contextClass = parameter.getContainingClass();
+		// 读取参数类型
 		Class<T> targetClass = (targetType instanceof Class ? (Class<T>) targetType : null);
 		if (targetClass == null) {
 			ResolvableType resolvableType = ResolvableType.forMethodParameter(parameter);
 			targetClass = (Class<T>) resolvableType.resolve();
 		}
-
+		// 读取请求方法
 		HttpMethod httpMethod = (inputMessage instanceof HttpRequest ? ((HttpRequest) inputMessage).getMethod() : null);
+		// 准备读取
 		Object body = NO_VALUE;
-
 		EmptyBodyCheckingHttpInputMessage message;
 		try {
 			message = new EmptyBodyCheckingHttpInputMessage(inputMessage);
-
+			// 迭代 messageConverters 读取参数
 			for (HttpMessageConverter<?> converter : this.messageConverters) {
 				Class<HttpMessageConverter<?>> converterType = (Class<HttpMessageConverter<?>>) converter.getClass();
-				GenericHttpMessageConverter<?> genericConverter =
-						(converter instanceof GenericHttpMessageConverter ? (GenericHttpMessageConverter<?>) converter : null);
-				if (genericConverter != null ? genericConverter.canRead(targetType, contextClass, contentType) :
+				GenericHttpMessageConverter<?> genericConverter = converter instanceof GenericHttpMessageConverter ? (GenericHttpMessageConverter<?>) converter : null;
+				// 如果能读取, 则读取之
+				if (genericConverter != null ?
+						genericConverter.canRead(targetType, contextClass, contentType) :
 						(targetClass != null && converter.canRead(targetClass, contentType))) {
 					if (message.hasBody()) {
-						HttpInputMessage msgToUse =
-								getAdvice().beforeBodyRead(message, parameter, targetType, converterType);
-						body = (genericConverter != null ? genericConverter.read(targetType, contextClass, msgToUse) :
-								((HttpMessageConverter<T>) converter).read(targetClass, msgToUse));
+						// 前置 advice
+						HttpInputMessage msgToUse = getAdvice().beforeBodyRead(message, parameter, targetType, converterType);
+						/**
+						 * 读取参数
+                         * @see AbstractJackson2HttpMessageConverter#read
+						 */
+						body = (genericConverter != null ? genericConverter.read(targetType, contextClass, msgToUse) : ((HttpMessageConverter<T>) converter).read(targetClass, msgToUse));
+						// 后置 advice
 						body = getAdvice().afterBodyRead(body, msgToUse, parameter, targetType, converterType);
 					}
 					else {
@@ -215,22 +221,21 @@ public abstract class AbstractMessageConverterMethodArgumentResolver implements 
 		catch (IOException ex) {
 			throw new HttpMessageNotReadableException("I/O error while reading input message", ex, inputMessage);
 		}
-
+		// 如果是不支持的方法或没有 contentType, 则返回 null
 		if (body == NO_VALUE) {
-			if (httpMethod == null || !SUPPORTED_METHODS.contains(httpMethod) ||
-					(noContentType && !message.hasBody())) {
+			if (httpMethod == null || !SUPPORTED_METHODS.contains(httpMethod) || (noContentType && !message.hasBody())) {
 				return null;
 			}
 			throw new HttpMediaTypeNotSupportedException(contentType, this.allSupportedMediaTypes);
 		}
-
+		// 打印日志
 		MediaType selectedContentType = contentType;
 		Object theBody = body;
 		LogFormatUtils.traceDebug(logger, traceOn -> {
 			String formatted = LogFormatUtils.formatValue(theBody, !traceOn);
 			return "Read \"" + selectedContentType + "\" to [" + formatted + "]";
 		});
-
+		// 返回
 		return body;
 	}
 
