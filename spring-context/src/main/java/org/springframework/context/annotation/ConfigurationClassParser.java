@@ -766,123 +766,9 @@ class ConfigurationClassParser {
 		}
 	}
 
-	// DeferredImportSelectorHandler
-	private class DeferredImportSelectorHandler {
-
-		@Nullable
-		private List<DeferredImportSelectorHolder> selectorHolders = new ArrayList<>();
-
-		/**
-		 * 将 configClass 和 importSelector 加入集合
-		 * 如果 selectorHolders 为空, 则直接导入和处理新的类
-		 */
-		public void handle(ConfigurationClass configClass, DeferredImportSelector importSelector) {
-			DeferredImportSelectorHolder selectorHolder = new DeferredImportSelectorHolder(configClass, importSelector);
-			if (this.selectorHolders == null) {
-				DeferredImportSelectorGroupingHandler groupingHandler = new DeferredImportSelectorGroupingHandler();
-				groupingHandler.register(selectorHolder);
-				groupingHandler.processGroupImports();
-			}
-			else {
-				this.selectorHolders.add(selectorHolder);
-			}
-		}
-
-		/**
-		 * 将 selectorHolders 排序并分组, 然后导入和处理新的类
-		 */
-		public void process() {
-			List<DeferredImportSelectorHolder> tmpSelectorHolders = this.selectorHolders;
-			this.selectorHolders = null;
-			try {
-				if (tmpSelectorHolders != null) {
-					DeferredImportSelectorGroupingHandler groupingHandler = new DeferredImportSelectorGroupingHandler();
-					// 排序
-					tmpSelectorHolders.sort(DEFERRED_IMPORT_COMPARATOR);
-					// 分组
-					tmpSelectorHolders.forEach(groupingHandler::register);
-					// 遍历分组并导入和处理新的类
-					groupingHandler.processGroupImports();
-				}
-			}
-			finally {
-				this.selectorHolders = new ArrayList<>();
-			}
-		}
-	}
-
-	// DeferredImportSelectorGroupingHandler
-	private class DeferredImportSelectorGroupingHandler {
-
-		private final Map<Object, DeferredImportSelectorGrouping> groupings = new LinkedHashMap<>();
-
-		private final Map<AnnotationMetadata, ConfigurationClass> configurationClasses = new HashMap<>();
-
-		// 将 deferredImportHolder 分组
-		public void register(DeferredImportSelectorHolder selectorHolder) {
-			// 取分组key
-			Class<? extends Group> groupClass = selectorHolder.getImportSelector().getImportGroup();
-			Object groupingKey = (groupClass != null ? groupClass : selectorHolder);
-			// 分组key -> 分组
-			Function<Object, DeferredImportSelectorGrouping> groupingFun = new Function<Object, DeferredImportSelectorGrouping>() {
-				@Override
-				public DeferredImportSelectorGrouping apply(Object groupingKey) {
-					// 创建分组
-					// DeferredImportSelectorGrouping 与 Group 可以合并成一个类, 这里搞麻烦了
-					Group group = createGroup(groupClass);
-					return new DeferredImportSelectorGrouping(group);
-				}
-			};
-			// 将分组加入 groupings
-			DeferredImportSelectorGrouping grouping = this.groupings.computeIfAbsent(groupingKey, groupingFun);
-			// 将 selectorHolder 加入分组
-			grouping.add(selectorHolder);
-			// 记录当前处理的配置类
-			this.configurationClasses.put(selectorHolder.getConfigurationClass().getMetadata(), selectorHolder.getConfigurationClass());
-		}
-
-		/**
-		 * 遍历分组并导入和处理新的类
-		 * @see DeferredImportSelector#selectImports
-		 * @see ConfigurationClassParser#processImports
-		 */
-		public void processGroupImports() {
-			for (DeferredImportSelectorGrouping grouping : this.groupings.values()) {
-				// 导入新的类
-				Iterable<Group.Entry> imports = grouping.getImports();
-				// 处理新的类
-				imports.forEach(new Consumer<Group.Entry>() {
-					@Override
-					public void accept(Group.Entry entry) {
-						ConfigurationClass configurationClass = configurationClasses.get(entry.getMetadata());
-						try {
-							processImports(configurationClass, asSourceClass(configurationClass), asSourceClasses(entry.getImportClassName()), false);
-						}
-						catch (BeanDefinitionStoreException ex) {
-							throw ex;
-						}
-						catch (Throwable ex) {
-							throw new BeanDefinitionStoreException(
-									"Failed to process import candidates for configuration class [" +
-											configurationClass.getMetadata().getClassName() + "]", ex);
-						}
-					}
-				});
-			}
-		}
-
-		// 创建分组
-		private Group createGroup(@Nullable Class<? extends Group> type) {
-			Class<? extends Group> effectiveType = (type != null ? type : DefaultDeferredImportSelectorGroup.class);
-			Group group = instantiateClass(effectiveType);
-			invokeAwareMethods(group,
-					ConfigurationClassParser.this.environment,
-					ConfigurationClassParser.this.resourceLoader,
-					ConfigurationClassParser.this.registry);
-			return group;
-		}
-	}
-
+	/**
+	 * 仅仅是一个 DeferredImportSelector 的包装器
+	 */
 	private static class DeferredImportSelectorHolder {
 
 		private final ConfigurationClass configurationClass;
@@ -903,8 +789,138 @@ class ConfigurationClassParser {
 		}
 	}
 
+	/**
+	 * 延迟导入的流程控制器, 完成以下事情
+	 * 1 初始化 DeferredImportSelectorGroupingHandler 并使用其对 DeferredImportSelectorHolder 分组
+	 * 2 使用 DeferredImportSelectorGroupingHandler 遍历分组并导入新的类
+	 */
+	private class DeferredImportSelectorHandler {
+
+		@Nullable
+		private List<DeferredImportSelectorHolder> selectorHolders = new ArrayList<>();
+
+		/**
+		 * 如果 selectorHolders 为空, 则直接开始分组和导入新的类
+		 * 反之, 则加入 selectorHolders
+		 */
+		public void handle(ConfigurationClass configClass, DeferredImportSelector importSelector) {
+			DeferredImportSelectorHolder selectorHolder = new DeferredImportSelectorHolder(configClass, importSelector);
+			if (this.selectorHolders == null) {
+				DeferredImportSelectorGroupingHandler groupingHandler = new DeferredImportSelectorGroupingHandler();
+				groupingHandler.register(selectorHolder);
+				groupingHandler.processGroupImports();
+			}
+			else {
+				this.selectorHolders.add(selectorHolder);
+			}
+		}
+
+		/**
+		 * 将 selectorHolders 排序、分组, 然后导入新的类
+		 */
+		public void process() {
+			List<DeferredImportSelectorHolder> tmpSelectorHolders = this.selectorHolders;
+			this.selectorHolders = null;
+			try {
+				if (tmpSelectorHolders != null) {
+					// 初始化 DeferredImportSelectorGroupingHandler
+					DeferredImportSelectorGroupingHandler groupingHandler = new DeferredImportSelectorGroupingHandler();
+					// 排序、分组 DeferredImportSelectorHolder
+					tmpSelectorHolders.sort(DEFERRED_IMPORT_COMPARATOR);
+					tmpSelectorHolders.forEach(groupingHandler::register);
+					// 遍历分组并导入新的类
+					groupingHandler.processGroupImports();
+				}
+			}
+			finally {
+				this.selectorHolders = new ArrayList<>();
+			}
+		}
+	}
+
+	/**
+	 * 延迟导入的分组器, 存储所有的分组
+	 * 完成以下事情
+	 * 1 将 DeferredImportSelectorHolder 分组
+	 * 2 遍历分组并导入新的类
+	 */
+	private class DeferredImportSelectorGroupingHandler {
+
+		private final Map<Object, DeferredImportSelectorGrouping> groupings = new LinkedHashMap<>();
+
+		private final Map<AnnotationMetadata, ConfigurationClass> configurationClasses = new HashMap<>();
+
+		// 将 deferredImportHolder 分组
+		public void register(DeferredImportSelectorHolder selectorHolder) {
+			// 取分组key
+			Class<? extends Group> groupClass = selectorHolder.getImportSelector().getImportGroup();
+			Object groupingKey = (groupClass != null ? groupClass : selectorHolder);
+			// 创建分组 function
+			Function<Object, DeferredImportSelectorGrouping> groupingFun = new Function<Object, DeferredImportSelectorGrouping>() {
+				@Override
+				public DeferredImportSelectorGrouping apply(Object groupingKey) {
+					Group group = createGroup(groupClass);
+					return new DeferredImportSelectorGrouping(group);
+				}
+			};
+			// 如果分组不存在, 则创建分组
+			// 注意 computeIfAbsent 方法, 它会调用 groupingFun 来生成分组(grouping)
+			DeferredImportSelectorGrouping grouping = this.groupings.computeIfAbsent(groupingKey, groupingFun);
+			// 将 selectorHolder 加入分组
+			grouping.add(selectorHolder);
+			// 记录当前正在处理的配置类
+			this.configurationClasses.put(selectorHolder.getConfigurationClass().getMetadata(), selectorHolder.getConfigurationClass());
+		}
+
+		/**
+		 * 遍历分组并导入新的类
+		 * @see DeferredImportSelector#selectImports
+		 * @see ConfigurationClassParser#processImports
+		 */
+		public void processGroupImports() {
+			for (DeferredImportSelectorGrouping grouping : this.groupings.values()) {
+				// 选择新的类
+				Iterable<Group.Entry> imports = grouping.getImports();
+				// 处理并导入新的类
+				imports.forEach(new Consumer<Group.Entry>() {
+					@Override
+					public void accept(Group.Entry entry) {
+						ConfigurationClass configurationClass = configurationClasses.get(entry.getMetadata());
+						try {
+							processImports(configurationClass, asSourceClass(configurationClass), asSourceClasses(entry.getImportClassName()), false);
+						}
+						catch (BeanDefinitionStoreException ex) {
+							throw ex;
+						}
+						catch (Throwable ex) {
+							throw new BeanDefinitionStoreException(
+									"Failed to process import candidates for configuration class [" +
+											configurationClass.getMetadata().getClassName() + "]", ex);
+						}
+					}
+				});
+			}
+		}
+
+		// 创建 Group
+		private Group createGroup(@Nullable Class<? extends Group> type) {
+			Class<? extends Group> effectiveType = (type != null ? type : DefaultDeferredImportSelectorGroup.class);
+			Group group = instantiateClass(effectiveType);
+			invokeAwareMethods(group,
+					ConfigurationClassParser.this.environment,
+					ConfigurationClassParser.this.resourceLoader,
+					ConfigurationClassParser.this.registry);
+			return group;
+		}
+	}
+
+	/**
+	 * 分组包装器, 存储 group、DeferredImportSelectorHolder
+	 * 完成以下事情
+	 * 遍历 group 上的 selectorHolders 并选择新的类
+	 */
 	private static class DeferredImportSelectorGrouping {
-		// 分组
+		// group
 		private final Group group;
 		// selectorHolders
 		private final List<DeferredImportSelectorHolder> selectorHolders = new ArrayList<>();
@@ -919,7 +935,7 @@ class ConfigurationClassParser {
 		}
 
 		/**
-		 * 遍历 selectorHolders 并导入新的类
+		 * 遍历 selectorHolders 并选择新的类
 		 */
 		public Iterable<Group.Entry> getImports() {
 			selectorHolders.stream().forEach(selectorHolder -> {
@@ -931,6 +947,10 @@ class ConfigurationClassParser {
 		}
 	}
 
+	/**
+	 * 默认的 Group 实现
+	 * @see org.springframework.boot.autoconfigure.AutoConfigurationImportSelector.AutoConfigurationGroup
+	 */
 	private static class DefaultDeferredImportSelectorGroup implements Group {
 
 		private final List<Entry> imports = new ArrayList<>();
@@ -948,7 +968,6 @@ class ConfigurationClassParser {
 			return this.imports;
 		}
 	}
-
 
 	/**
 	 * 包装 class 已提供统一的接口来访问 class 信息
