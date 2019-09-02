@@ -129,8 +129,8 @@ final class PostProcessorRegistrationDelegate {
 		String[] postProcessorNames = beanFactory.getBeanNamesForType(BeanFactoryPostProcessor.class, true, false);
 		// 查找并分组 BeanFactoryPostProcessor
 		List<BeanFactoryPostProcessor> priorityOrderedPostProcessors = new ArrayList<>();
-		List<BeanFactoryPostProcessor> orderedPostProcessors = new ArrayList<>();
-		List<BeanFactoryPostProcessor> nonOrderedPostProcessors = new ArrayList<>();
+		List<String> orderedPostProcessorNames = new ArrayList<>();
+		List<String> nonOrderedPostProcessorNames = new ArrayList<>();
 		for (String ppName : postProcessorNames) {
 			if (processedBeans.contains(ppName)) {
 				// skip - already processed in first phase above
@@ -139,19 +139,27 @@ final class PostProcessorRegistrationDelegate {
 				priorityOrderedPostProcessors.add(beanFactory.getBean(ppName, BeanFactoryPostProcessor.class));
 			}
 			else if (beanFactory.isTypeMatch(ppName, Ordered.class)) {
-				orderedPostProcessors.add(beanFactory.getBean(ppName, BeanFactoryPostProcessor.class));
+				orderedPostProcessorNames.add(ppName);
 			}
 			else {
-				nonOrderedPostProcessors.add(beanFactory.getBean(ppName, BeanFactoryPostProcessor.class));
+				nonOrderedPostProcessorNames.add(ppName);
 			}
 		}
 		// 1, 调用 PriorityOrdered 的 BeanFactoryPostProcessor
 		sortPostProcessors(priorityOrderedPostProcessors, beanFactory);
 		invokeBeanFactoryPostProcessors(priorityOrderedPostProcessors, beanFactory);
 		// 2, 调用 Ordered 的 BeanFactoryPostProcessor
+		List<BeanFactoryPostProcessor> orderedPostProcessors = new ArrayList<>();
+		for (String postProcessorName : orderedPostProcessorNames) {
+			orderedPostProcessors.add(beanFactory.getBean(postProcessorName, BeanFactoryPostProcessor.class));
+		}
 		sortPostProcessors(orderedPostProcessors, beanFactory);
 		invokeBeanFactoryPostProcessors(orderedPostProcessors, beanFactory);
 		// 3, 调用 nonOrdered 的 BeanFactoryPostProcessor
+		List<BeanFactoryPostProcessor> nonOrderedPostProcessors = new ArrayList<>();
+		for (String postProcessorName : nonOrderedPostProcessorNames) {
+			nonOrderedPostProcessors.add(beanFactory.getBean(postProcessorName, BeanFactoryPostProcessor.class));
+		}
 		invokeBeanFactoryPostProcessors(nonOrderedPostProcessors, beanFactory);
 		// 清除缓存的 merged bean definitions
 		beanFactory.clearMetadataCache();
@@ -171,40 +179,51 @@ final class PostProcessorRegistrationDelegate {
 
 		// 将 BeanPostProcessors 分成 priorityOrdered、ordered、nonOrdered、internalPostProcessors 四组后注册
 		List<BeanPostProcessor> priorityOrderedPostProcessors = new ArrayList<>();
-		List<BeanPostProcessor> orderedPostProcessors = new ArrayList<>();
-		List<BeanPostProcessor> nonOrderedPostProcessors = new ArrayList<>();
 		List<BeanPostProcessor> internalPostProcessors = new ArrayList<>();
+		List<String> orderedPostProcessorNames = new ArrayList<>();
+		List<String> nonOrderedPostProcessorNames = new ArrayList<>();
 		for (String ppName : postProcessorNames) {
-			BeanPostProcessor pp;
 			if (beanFactory.isTypeMatch(ppName, PriorityOrdered.class)) {
-				pp = beanFactory.getBean(ppName, BeanPostProcessor.class);
+				BeanPostProcessor pp = beanFactory.getBean(ppName, BeanPostProcessor.class);
 				priorityOrderedPostProcessors.add(pp);
-
+				if (pp instanceof MergedBeanDefinitionPostProcessor) {
+					internalPostProcessors.add(pp);
+				}
 			}
 			else if (beanFactory.isTypeMatch(ppName, Ordered.class)) {
-				pp = beanFactory.getBean(ppName, BeanPostProcessor.class);
-				orderedPostProcessors.add(pp);
+				orderedPostProcessorNames.add(ppName);
 			}
 			else {
-				pp = beanFactory.getBean(ppName, BeanPostProcessor.class);
-				nonOrderedPostProcessors.add(pp);
-			}
-			if (pp instanceof MergedBeanDefinitionPostProcessor) {
-				internalPostProcessors.add(pp);
+				nonOrderedPostProcessorNames.add(ppName);
 			}
 		}
 		// 1, 注册 PriorityOrdered 的 BeanPostProcessors
 		sortPostProcessors(priorityOrderedPostProcessors, beanFactory);
 		registerBeanPostProcessors(beanFactory, priorityOrderedPostProcessors);
 		// 2, 注册 Ordered 的 BeanPostProcessors
+		List<BeanPostProcessor> orderedPostProcessors = new ArrayList<>();
+		for (String ppName : orderedPostProcessorNames) {
+			BeanPostProcessor pp = beanFactory.getBean(ppName, BeanPostProcessor.class);
+			orderedPostProcessors.add(pp);
+			if (pp instanceof MergedBeanDefinitionPostProcessor) {
+				internalPostProcessors.add(pp);
+			}
+		}
 		sortPostProcessors(orderedPostProcessors, beanFactory);
 		registerBeanPostProcessors(beanFactory, orderedPostProcessors);
 		// 3, 注册 nonOrdered 的 BeanPostProcessors
+		List<BeanPostProcessor> nonOrderedPostProcessors = new ArrayList<>();
+		for (String ppName : nonOrderedPostProcessorNames) {
+			BeanPostProcessor pp = beanFactory.getBean(ppName, BeanPostProcessor.class);
+			nonOrderedPostProcessors.add(pp);
+			if (pp instanceof MergedBeanDefinitionPostProcessor) {
+				internalPostProcessors.add(pp);
+			}
+		}
 		registerBeanPostProcessors(beanFactory, nonOrderedPostProcessors);
 		// 4, 注册 MergedBeanDefinitionPostProcessor 的 BeanPostProcessors
 		sortPostProcessors(internalPostProcessors, beanFactory);
 		registerBeanPostProcessors(beanFactory, internalPostProcessors);
-
 		// 重新注册 ApplicationListenerDetector
 		beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(applicationContext));
 	}
