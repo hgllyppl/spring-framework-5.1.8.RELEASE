@@ -191,7 +191,8 @@ class ConfigurationClassBeanDefinitionReader {
 		for (String alias : names) {
 			this.registry.registerAlias(beanName, alias);
 		}
-		// 是否不允许覆盖已存在的 beanDefinition
+		// 是否正在覆盖已存在的 beanDefinition
+		// 如果是则不允许覆盖, 但当 beanName 同声明它的类名相同, 则抛出异常
 		if (isOverriddenByExistingDefinition(beanMethod, beanName)) {
 			if (beanName.equals(beanMethod.getConfigurationClass().getBeanName())) {
 				throw new BeanDefinitionStoreException(beanMethod.getConfigurationClass().getResource().getDescription(),
@@ -260,19 +261,19 @@ class ConfigurationClassBeanDefinitionReader {
 		this.registry.registerBeanDefinition(beanName, beanDefToRegister);
 	}
 
-	// 是否不允许覆盖已存在的 beanDefinition
+	// 是否正在覆盖已存在的 beanDefinition
 	protected boolean isOverriddenByExistingDefinition(BeanMethod beanMethod, String beanName) {
 		if (!this.registry.containsBeanDefinition(beanName)) {
 			return false;
 		}
 		BeanDefinition existingBeanDef = this.registry.getBeanDefinition(beanName);
-		// 如果是相同 class 声明的同名 bean, 则不允许覆盖
+		// 如果声明 bean 的 class 相同, 则返回 true
 		if (existingBeanDef instanceof ConfigurationClassBeanDefinition) {
 			ConfigurationClassBeanDefinition ccbd = (ConfigurationClassBeanDefinition) existingBeanDef;
 			return ccbd.getMetadata().getClassName().equals(
 					beanMethod.getConfigurationClass().getMetadata().getClassName());
 		}
-		// 如果已存在的 BeanDef 是 ScannedGenericBeanDefinition, 则允许覆盖
+		// 如果已存在的 BeanDef 是 ScannedGenericBeanDefinition, 则返回 false
 		if (existingBeanDef instanceof ScannedGenericBeanDefinition) {
 			return false;
 		}
@@ -292,7 +293,7 @@ class ConfigurationClassBeanDefinitionReader {
 					"already exists. This top-level bean definition is considered as an override.",
 					beanMethod, beanName));
 		}
-		// 以上都不是, 则不允许覆盖
+		// 以上都不是, 则返回 true
 		return true;
 	}
 

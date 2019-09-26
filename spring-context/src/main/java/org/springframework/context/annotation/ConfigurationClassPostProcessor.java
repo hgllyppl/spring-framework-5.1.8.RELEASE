@@ -297,25 +297,25 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		ConfigurationClassParser parser = new ConfigurationClassParser(
 				this.metadataReaderFactory, this.problemReporter, this.environment,
 				this.resourceLoader, this.componentScanBeanNameGenerator, registry);
-		Set<BeanDefinitionHolder> bootstrapConfigs = new LinkedHashSet<>(originalConfigs);
+		Set<BeanDefinitionHolder> waitForParsedConfigs = new LinkedHashSet<>(originalConfigs);
 		Set<ConfigurationClass> alreadyParsedConfigs = new HashSet<>(originalConfigs.size());
 		do {
 			// 解析并验证配置类
-			parser.parse(bootstrapConfigs);
+			parser.parse(waitForParsedConfigs);
 			parser.validate();
 			// 准备读取 BeanDefinition
-			Set<ConfigurationClass> currentConfigs = new LinkedHashSet<>(parser.getConfigurationClasses());
-			currentConfigs.removeAll(alreadyParsedConfigs);
+			Set<ConfigurationClass> waitForReadedConfigs = new LinkedHashSet<>(parser.getConfigurationClasses());
+			waitForReadedConfigs.removeAll(alreadyParsedConfigs);
 			if (this.reader == null) {
 				this.reader = new ConfigurationClassBeanDefinitionReader(
 						registry, this.sourceExtractor, this.resourceLoader, this.environment,
 						this.importBeanNameGenerator, parser.getImportRegistry());
 			}
 			// 读取 BeanDefinition
-			this.reader.loadBeanDefinitions(currentConfigs);
+			this.reader.loadBeanDefinitions(waitForReadedConfigs);
 			// 记录已解析的配置类
-			alreadyParsedConfigs.addAll(currentConfigs);
-			bootstrapConfigs.clear();
+			alreadyParsedConfigs.addAll(waitForReadedConfigs);
+			waitForParsedConfigs.clear();
 			// 如果有新的 BeanDefinition
 			if (registry.getBeanDefinitionCount() > currentBeanNames.length) {
 				String[] newBeanNames = registry.getBeanDefinitionNames();
@@ -330,12 +330,12 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 						.map(beanName -> new BeanDefinitionHolder(registry.getBeanDefinition(beanName), beanName))
 						.filter(bdh -> checkConfigurationClassCandidate(bdh.getBeanDefinition(), metadataReaderFactory))
 						.filter(bdh -> !alreadyParsedConfigNames.contains(bdh.getBeanDefinition().getBeanClassName()))
-						.forEach(bootstrapConfigs::add);
-				// 从新赋值 currentBeanNames
+						.forEach(waitForParsedConfigs::add);
+				// 重新赋值 currentBeanNames
 				currentBeanNames = newBeanNames;
 			}
 		}
-		while (!bootstrapConfigs.isEmpty());
+		while (!waitForParsedConfigs.isEmpty());
 
 		// 注册 ImportStack, 用于 ImportAwareBeanPostProcessor
 		if (sbr != null && !sbr.containsSingleton(IMPORT_REGISTRY_BEAN_NAME)) {
