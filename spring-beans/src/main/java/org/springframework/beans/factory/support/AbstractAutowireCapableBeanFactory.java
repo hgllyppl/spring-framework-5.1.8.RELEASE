@@ -589,9 +589,10 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		if (earlySingletonExposure) {
 			// eg. 代理行为的循环引用
 			// eg. circularRefA -> circularRefB -> circularRefA
+			// eg. circularRefA 在注入 circularRefB 时, 将触发circularRefB的实例化, 而circularRefB又引用了circularRefA, 所以将触发 earlySingletonReferenceA 的形成
+			// 因此 earlySingletonReference 在这里是有值的, 而 exposedObject 和 bean 在此时应该是相同的
+			// 且 earlySingletonReference 与他们不同, 所以 exposedObject 被赋值成 earlySingletonReference
 			Object earlySingletonReference = getSingleton(beanName, false);
-			// circularRefA 在注入 circularRefB 后, 将获取到被 circularRefB 触发的 earlySingletonReferenceA
-			// 因此 exposedObject 将被赋值成 earlySingletonReferenceA
 			if (earlySingletonReference != null) {
 				if (exposedObject == bean) {
 					exposedObject = earlySingletonReference;
